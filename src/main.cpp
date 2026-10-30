@@ -236,13 +236,13 @@ int main(int argc, char** argv) {
         if (a1 != std::string::npos) arg = arg.substr(a1);
 
         if (cmd == "help") {
-            const int W = 65, LC = 22, RC = 36;
+            const int W = 64, LC = 22, RC = 36;
             std::cout << esc( cur->vr, cur->vg, cur->vb) << "┌" << rep(W - 2, "─") << "┐" << escReset() << "\n";
             std::cout << esc( cur->vr, cur->vg, cur->vb) << "│" << escDim()
                       << std::string(2, ' ') << "Plusalator" << escReset()
                       << std::string(W - 2 - 2 - 10, ' ')
                       << esc( cur->vr, cur->vg, cur->vb) << "│" << escReset() << "\n";
-            std::cout << esc( cur->vr, cur->vg, cur->vb) << "├" << rep(LC + 2, "─") << "┬" << rep(RC + 2, "─") << "┤" << escReset() << "\n";
+            std::cout << esc( cur->vr, cur->vg, cur->vb) << "├" << rep(LC + 2, "─") << "┬" << rep(RC + 1, "─") << "┤" << escReset() << "\n";
             struct HelpRow { std::string c, d; };
             HelpRow rows[] = {
                 {"<expr>", "evaluate an expression"},
