@@ -17,12 +17,17 @@ plusa❯ f(x)=x^2+1;f(3)
 ```
 make            # build plusalator
 make check      # build + run tests/test.sh + syntax check (gate)
-make banner     # regenerate src/banner.h from figlet (needs pkg install figlet)
+make banner     # regenerate src/banner.h from figlet
 make clean
-make install    # PREFIX-aware (defaults to $PREFIX)
+make install    # PREFIX-aware: $PREFIX on Termux, /usr/local on Linux by default
 ```
 
-Requires: `clang++` (or `g++`), `figlet` only for `make banner`.
+Requires: a C++17 compiler (`clang++` or `g++`); `figlet` only for `make banner`
+( Termux: `pkg install figlet` · Linux: your distro's figlet package ).
+
+Install prefix: honors `$PREFIX` when set (Termux sets it automatically); otherwise
+defaults to `/usr/local` on Linux. Temp files honor `$TMPDIR` (Termux sets it);
+otherwise `/tmp` on Linux. History is always `$HOME/.plusalator_history`.
 
 ## Engine (Qalculate semantics)
 

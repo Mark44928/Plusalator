@@ -1,17 +1,16 @@
-# Plusalator Makefile — Termux native. TMPDIR injected in every recipe.
+# Plusalator Makefile — portable: standard Linux defaults, Termux honored
+# via $PREFIX / $TMPDIR (set automatically in the Termux environment).
 CXX ?= clang++
 CXXFLAGS := -Wall -Wextra -O2 -std=c++17
 
-TMPDIR := $(shell echo "$$TMPDIR")
-ifeq ($(TMPDIR),)
-TMPDIR := /data/data/com.termux/files/usr/tmp
-endif
+# Respect $TMPDIR when set; fall back to /tmp (Linux) — Termux sets $TMPDIR.
+TMPDIR ?= /tmp
 export TMPDIR
 
-PREFIX ?= $(shell echo "$$PREFIX")
-ifeq ($(PREFIX),)
-PREFIX := /data/data/com.termux/files/usr
-endif
+# Respect $PREFIX when set; fall back to /usr/local (Linux install prefix).
+# Termux sets $PREFIX to its own install root automatically.
+PREFIX ?= /usr/local
+export PREFIX
 
 SRC := src/calc.cpp src/main.cpp src/lineedit.cpp
 OBJ := $(SRC:.cpp=.o)
@@ -58,6 +57,7 @@ banner:
 		mv src/banner.h.new src/banner.h; \
 		rm -f "$(TMPDIR)/plusalator-figlet.out"; \
 	else \
-		echo "figlet not installed; run: pkg install figlet"; \
+		echo "figlet not installed; on Termux: pkg install figlet"; \
+		echo "          on Linux:  install figlet via your distro package manager"; \
 		exit 1; \
 	fi
