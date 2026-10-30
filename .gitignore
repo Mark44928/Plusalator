@@ -1,0 +1,4 @@
+# Build artifacts
+plusalator
+src/*.o
+src/banner.h.new
