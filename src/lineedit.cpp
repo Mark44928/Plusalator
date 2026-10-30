@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <fcntl.h>
+#include <sys/ioctl.h>
 #include <iostream>
 
 enum {
@@ -73,6 +73,25 @@ void LineEditor::addHistory(const std::string& line) {
     saveHistory();
 }
 
+int LineEditor::termWidth() {
+    struct winsize w;
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == 0 && w.ws_col > 0) return (int)w.ws_col;
+    return 80;
+}
+
+size_t LineEditor::visibleLen(const std::string& s) {
+    size_t n = 0;
+    for (size_t i = 0; i < s.size(); i++) {
+        if (s[i] == '\033' && i + 1 < s.size() && s[i + 1] == '[') {
+            i += 2;
+            while (i < s.size() && !((unsigned char)s[i] >= 0x40 && (unsigned char)s[i] <= 0x7e)) i++;
+            continue;
+        }
+        n++;
+    }
+    return n;
+}
+
 void LineEditor::enterRaw() {
     if (!isTty_) return;
     struct termios raw = origTty_;
@@ -94,19 +113,71 @@ void LineEditor::leaveRaw() {
     ttyRaw_ = false;
 }
 
+std::string LineEditor::ghostSuffix(const std::string& buf) const {
+    // most recent history entry that starts with buf and is longer than buf
+    for (int i = (int)history_.size() - 1; i >= 0; i--) {
+        if (hasPrefix(history_[i], buf) && history_[i].size() > buf.size())
+            return history_[i].substr(buf.size());
+    }
+    return "";
+}
+
+bool LineEditor::hasPrefix(const std::string& entry, const std::string& prefix) {
+    if (prefix.size() > entry.size()) return false;
+    return entry.compare(0, prefix.size(), prefix) == 0;
+}
+
 void LineEditor::redraw(const std::string& prompt, const std::string& buf, size_t cur) {
     std::string out;
-    out.reserve(prompt.size() + buf.size() + 32);
+    out.reserve(prompt.size() + buf.size() + rightStatus_.size() + 64);
     out += "\r";
     out += "\033[K";
     out += prompt;
     out += buf;
+
+    size_t ghostLen = 0;
+    if (cur == buf.size() && !buf.empty()) {
+        std::string suf = ghostSuffix(buf);
+        if (!suf.empty()) {
+            out += "\033[2m";
+            out += suf;
+            out += "\033[0m";
+            ghostLen = suf.size();
+        }
+    }
+
+    // position cursor at end of the typed buffer (before the ghost)
+    if (ghostLen > 0) {
+        char tmp[32];
+        snprintf(tmp, sizeof tmp, "\033[%zuD", ghostLen);
+        out += tmp;
+    }
+
+    // right-aligned, dim status line via save-cursor / column / restore
+    if (!rightStatus_.empty()) {
+        size_t slen = visibleLen(rightStatus_);
+        int w = termWidth();
+        int col = (int)w - (int)slen;
+        if (col < 0) col = 0;
+        out += "\033[s"; // save cursor
+        {
+            char tmp[32];
+            snprintf(tmp, sizeof tmp, "\033[%dG", col + 1);
+            out += tmp;
+        }
+        out += "\033[2m";
+        out += rightStatus_;
+        out += "\033[0m";
+        out += "\033[u"; // restore cursor
+    }
+
     size_t left = buf.size() - cur;
     if (left > 0) {
         char tmp[32];
         snprintf(tmp, sizeof tmp, "\033[%zuD", left);
         out += tmp;
     }
+
     fputs(out.c_str(), stdout);
     fflush(stdout);
 }
@@ -147,7 +218,6 @@ int LineEditor::readKey(std::string& text) {
                 if (params == "4" || params == "8") return KEY_END;
                 if (params == "3") return KEY_DELETE;
                 if (params == "200") {
-                    // bracketed paste: collect until ESC [ 2 0 1 ~
                     std::string collected;
                     while (true) {
                         char c;
@@ -178,7 +248,7 @@ int LineEditor::readKey(std::string& text) {
                             collected += b2;
                             continue;
                         }
-                        if (c >= 0x20) collected += c; // strip control chars
+                        if (c >= 0x20) collected += c;
                     }
                     text = collected;
                     return KEY_PASTE;
@@ -188,11 +258,6 @@ int LineEditor::readKey(std::string& text) {
         }
         params += b;
     }
-}
-
-bool LineEditor::hasPrefix(const std::string& entry, const std::string& prefix) {
-    if (prefix.size() > entry.size()) return false;
-    return entry.compare(0, prefix.size(), prefix) == 0;
 }
 
 void LineEditor::historyUp(std::string& buf, size_t& cur) {
@@ -307,16 +372,34 @@ bool LineEditor::edit(std::string& out, const std::string& prompt) {
                     break;
                 }
                 case KEY_CTRL_F: {
-                    if (cur < buf.size()) cur++;
+                    // accept ghost if at end
+                    if (cur == buf.size() && !buf.empty()) {
+                        std::string suf = ghostSuffix(buf);
+                        if (!suf.empty()) { insertStr(buf, cur, suf); }
+                    }
                     redraw(prompt, buf, cur);
                     break;
                 }
                 case KEY_UP: { historyUp(buf, cur); redraw(prompt, buf, cur); break; }
                 case KEY_DOWN: { historyDown(buf, cur); redraw(prompt, buf, cur); break; }
-                case KEY_LEFT: { if (cur > 0) cur--; redraw(prompt, buf, cur); break; }
-                case KEY_RIGHT: { if (cur < buf.size()) cur++; redraw(prompt, buf, cur); break; }
-                case KEY_HOME: { cur = 0; redraw(prompt, buf, cur); break; }
-                case KEY_END: { cur = buf.size(); redraw(prompt, buf, cur); break; }
+                case KEY_LEFT: {
+                    if (cur > 0) cur--;
+                    histIndex_ = -1;
+                    redraw(prompt, buf, cur);
+                    break;
+                }
+                case KEY_RIGHT: {
+                    if (cur == buf.size() && !buf.empty()) {
+                        std::string suf = ghostSuffix(buf);
+                        if (!suf.empty()) { insertStr(buf, cur, suf); break; }
+                    }
+                    if (cur < buf.size()) cur++;
+                    histIndex_ = -1;
+                    redraw(prompt, buf, cur);
+                    break;
+                }
+                case KEY_HOME: { cur = 0; histIndex_ = -1; redraw(prompt, buf, cur); break; }
+                case KEY_END: { cur = buf.size(); histIndex_ = -1; redraw(prompt, buf, cur); break; }
                 case KEY_DELETE: { if (cur < buf.size()) buf.erase(cur, 1); histIndex_ = -1; redraw(prompt, buf, cur); break; }
                 case KEY_BACKSPACE: { if (cur > 0) { buf.erase(cur - 1, 1); cur--; } histIndex_ = -1; redraw(prompt, buf, cur); break; }
                 case KEY_PASTE: {

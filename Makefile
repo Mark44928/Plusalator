@@ -13,7 +13,7 @@ ifeq ($(PREFIX),)
 PREFIX := /data/data/com.termux/files/usr
 endif
 
-SRC := src/calc.cpp src/main.cpp
+SRC := src/calc.cpp src/main.cpp src/lineedit.cpp
 OBJ := $(SRC:.cpp=.o)
 BIN := plusalator
 
@@ -24,7 +24,7 @@ all: $(BIN)
 $(BIN): $(OBJ)
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJ)
 
-src/%.o: src/%.cpp src/calc.h
+src/%.o: src/%.cpp src/calc.h src/lineedit.h
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 run: all
