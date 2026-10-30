@@ -112,7 +112,7 @@ int main(int argc, char** argv) {
 
     auto promptText = [&cur]() -> std::string {
         return escBold() + esc( cur->pr, cur->pg, cur->pb) + "plusa" + escReset()
-             + escBold() + esc( cur->pr, cur->pg, cur->pb) + "\xe2\x9d\xaf" + escReset() + " ";
+             + escBold() + esc( cur->ar, cur->ag, cur->ab) + "✧❯" + escReset() + " ";
     };
 
     auto varCount = [&ctx]() { return (int)ctx.vars.size(); };
