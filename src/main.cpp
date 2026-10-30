@@ -110,6 +110,11 @@ int main(int argc, char** argv) {
     Context ctx;
     LineEditor edit;
 
+    auto promptText = [&cur]() -> std::string {
+        return escBold() + esc( cur->pr, cur->pg, cur->pb) + "plusa" + escReset()
+             + escBold() + esc( cur->pr, cur->pg, cur->pb) + "\xe2\x9d\xaf" + escReset() + " ";
+    };
+
     auto varCount = [&ctx]() { return (int)ctx.vars.size(); };
     auto setStatus = [&edit, &cur, &varCount]() {
         edit.setRightStatus(cur->name + " · " + std::to_string(varCount()) + " vars");
@@ -146,7 +151,7 @@ int main(int argc, char** argv) {
 
     while (true) {
         std::string line;
-        if (!edit.edit(line, "")) break; // Ctrl+D on empty -> quit
+        if (!edit.edit(line, promptText())) break; // Ctrl+D on empty -> quit
         if (line.empty()) { setStatus(); continue; }
         if (line == "quit" || line == "exit" || line == "q") break;
 
