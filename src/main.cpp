@@ -7,6 +7,7 @@
 #include <sys/ioctl.h>
 #include <cstdio>
 #include <algorithm>
+#include <cmath>
 
 static void printCaretError(const std::string& input, const CalcError& err) {
     std::cout << input << "\n";
@@ -60,7 +61,30 @@ static std::string esc(int r, int g, int b) {
 static std::string escReset() { return colorEnabled() ? "\033[0m" : ""; }
 static std::string escBold() { return colorEnabled() ? "\033[1m" : ""; }
 static std::string escDim() { return colorEnabled() ? "\033[2m" : ""; }
+static std::string escItalic() { return colorEnabled() ? "\033[3m" : ""; }
 static std::string rep(int n, const char* s) { std::string r; for (int i = 0; i < n; i++) r += s; return r; }
+
+// Display width in columns: each UTF-8 sequence counts as one column. Adequate for
+// the BMP glyphs used here (─ ⟨ ⟩ ➤ ·) and ASCII.
+static size_t dispWidth(const std::string& s) {
+    size_t n = 0;
+    for (size_t i = 0; i < s.size(); ) {
+        unsigned char c = (unsigned char)s[i];
+        if (c < 0x80) { i += 1; }
+        else if ((c & 0xE0) == 0xC0) { i += 2; }
+        else if ((c & 0xF0) == 0xE0) { i += 3; }
+        else if ((c & 0xF8) == 0xF0) { i += 4; }
+        else { i += 1; }
+        n += 1;
+    }
+    return n;
+}
+
+static int termWidth() {
+    struct winsize w;
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == 0 && w.ws_col > 0) return (int)w.ws_col;
+    return 80;
+}
 
 struct Styled {
     std::string text;
@@ -110,14 +134,56 @@ int main(int argc, char** argv) {
     Context ctx;
     LineEditor edit;
 
-    auto promptText = [&cur]() -> std::string {
-        return escBold() + esc( cur->pr, cur->pg, cur->pb) + "plusa" + escReset()
-             + escBold() + esc( cur->ar, cur->ag, cur->ab) + "✧❯" + escReset() + " ";
+    bool errorFlash = false;
+
+    auto promptText = [&cur, &errorFlash]() -> std::string {
+        std::string out;
+        // ⟨  accent brackets
+        out += escBold() + esc(cur->ar, cur->ag, cur->ab) + "⟨" + escReset();
+        out += " ";
+        // plusa  hint color, italic
+        out += escItalic() + esc(cur->hr, cur->hg, cur->hb) + "plusa" + escReset();
+        out += " ";
+        // ⟩  accent bracket
+        out += esc(cur->ar, cur->ag, cur->ab) + "⟩" + escReset();
+        out += " ";
+        // ➤  accent, bold — flashes rose once on error
+        int ar = cur->ar, ag = cur->ag, ab = cur->ab;
+        if (errorFlash) { ar = 255; ag = 90; ab = 120; errorFlash = false; }
+        out += escBold() + esc(ar, ag, ab) + "➤" + escReset() + " ";
+        return out;
     };
 
-    auto varCount = [&ctx]() { return (int)ctx.vars.size(); };
-    auto setStatus = [&edit, &cur, &varCount]() {
-        edit.setRightStatus(cur->name + " · " + std::to_string(varCount()) + " vars");
+    auto transientPromptText = [&cur]() -> std::string {
+        std::string out;
+        out += "\033[2m";
+        out += esc(cur->ar, cur->ag, cur->ab) + "⟨" + escReset();
+        out += " ";
+        out += esc(cur->hr, cur->hg, cur->hb) + "plusa" + escReset();
+        out += " ";
+        out += esc(cur->ar, cur->ag, cur->ab) + "⟩" + escReset();
+        out += " ";
+        out += "\033[1m" + esc(cur->ar, cur->ag, cur->ab) + "➤" + escReset();
+        out += "\033[0m ";
+        return out;
+    };
+
+    auto printLine1 = [&cur, &ctx]() {
+        int w = termWidth();
+        std::string status = cur->name + " · " + std::to_string((int)ctx.vars.size()) + " vars";
+        size_t slen = dispWidth(status);
+        int ruleCells = w - (int)slen - 2;
+        if (ruleCells < 0) ruleCells = 0;
+        if ((int)slen > w - 2) slen = w - 2; // keep status on one line
+        status.resize(slen);
+        for (int i = 0; i < ruleCells; i++) {
+            double f = (ruleCells > 1) ? (1.0 - std::abs(2.0 * i / (double)(ruleCells - 1) - 1.0)) : 1.0;
+            int r = (int)(cur->hr * (1.0 - f) + cur->ar * f);
+            int g = (int)(cur->hg * (1.0 - f) + cur->ag * f);
+            int b = (int)(cur->hb * (1.0 - f) + cur->ab * f);
+            std::cout << esc(r, g, b) << "─";
+        }
+        std::cout << escReset() << "  " << escDim() << status << escReset() << "\n";
     };
 
     auto printBanner = [&cur]() {
@@ -145,17 +211,18 @@ int main(int argc, char** argv) {
     };
 
     printBanner();
-    setStatus();
     std::cout << escDim() << "Tip: type " << escBold() << "help" << escReset()
               << escDim() << " for commands, or enter an expression to calculate." << escReset() << "\n";
 
     while (true) {
+        printLine1();
+        edit.setTransientPrompt(transientPromptText());
         std::string line;
         if (!edit.edit(line, promptText())) break; // Ctrl+D on empty -> quit
-        if (line.empty()) { setStatus(); continue; }
+        if (line.empty()) { printLine1(); continue; }
         if (line == "quit" || line == "exit" || line == "q") break;
 
-        std::cout << "\r\033[K" << escDim() << "» " << line << escReset() << "\n";
+        std::cout << "\r\033[K" << escDim() << "⟨ ·· ⟩ ➤ " << line << escReset() << "\n";
 
         // tokenize first word for command dispatch
         size_t a0 = line.find_first_not_of(" \t");
@@ -236,7 +303,7 @@ int main(int argc, char** argv) {
                 std::cout << escDim() << "current: " << cur->name << " (use: theme <name>)" << escReset() << "\n";
             } else {
                 const Theme* nt = findTheme(arg);
-                if (nt) { cur = nt; setStatus(); }
+                if (nt) { cur = nt; printLine1(); }
                 else std::cout << esc( cur->er, cur->eg, cur->eb) << "unknown theme: " << arg << escReset() << "\n";
             }
         } else if (cmd == "quit" || cmd == "exit" || cmd == "q") {
@@ -246,6 +313,7 @@ int main(int argc, char** argv) {
                 double result = evalLine(line, ctx);
                 std::cout << esc( cur->rr, cur->rg, cur->rb) << "= " << formatNumber(result) << escReset() << "\n";
             } catch (const CalcError& err) {
+                errorFlash = true;
                 std::cout << line << "\n";
                 size_t col = err.col;
                 if (col < 1) col = 1;
@@ -256,7 +324,7 @@ int main(int argc, char** argv) {
                 std::cout << esc( cur->er, cur->eg, cur->eb) << err.what() << escReset() << "\n";
             }
         }
-        setStatus();
+        printLine1();
     }
     std::cout << "\n";
     return 0;

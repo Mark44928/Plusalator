@@ -131,8 +131,35 @@ void LineEditor::redraw(const std::string& prompt, const std::string& buf, size_
     std::string out;
     out.reserve(prompt.size() + buf.size() + rightStatus_.size() + 64);
     out += "\r";
-    out += "\033[K";
-    out += prompt;
+
+    const bool useTransient = transient_ && !transientPrompt_.empty();
+    const std::string& showPrompt = useTransient ? transientPrompt_ : prompt;
+
+    // Clear the orphan short rule line above when leaving the transient state.
+    if (wasTransient_ && !useTransient) {
+        out += "\033[1A\033[K\033[1B";
+    }
+
+    if (useTransient) {
+        // Short dim rule above the transient prompt line.
+        out += "\033[K";
+        out += "\033[1A";           // move up one line
+        out += "\033[K";            // clear it
+        out += "\033[2m";
+        {
+            int w = termWidth();
+            std::string rule;
+            rule.reserve((size_t)w > 0 ? (size_t)w : 80);
+            for (int i = 0; i < w; i++) rule += "─";
+            out += rule;
+        }
+        out += "\033[0m";
+        out += "\033[1B";           // move back down
+        out += "\r\033[K";          // clear current line
+    } else {
+        out += "\033[K";
+    }
+    out += showPrompt;
     out += buf;
 
     size_t ghostLen = 0;
@@ -318,6 +345,8 @@ bool LineEditor::edit(std::string& out, const std::string& prompt) {
     std::string buf;
     size_t cur = 0;
     histIndex_ = -1;
+    transient_ = false;
+    wasTransient_ = false;
     bool submitted = false;
     bool quit = false;
 
@@ -340,6 +369,7 @@ bool LineEditor::edit(std::string& out, const std::string& prompt) {
                     buf.clear();
                     cur = 0;
                     histIndex_ = -1;
+                    transient_ = true;
                     redraw(prompt, buf, cur);
                     break;
                 }
@@ -366,6 +396,7 @@ bool LineEditor::edit(std::string& out, const std::string& prompt) {
                 case KEY_CTRL_A: { cur = 0; redraw(prompt, buf, cur); break; }
                 case KEY_CTRL_E: { cur = buf.size(); redraw(prompt, buf, cur); break; }
                 case KEY_CTRL_L: {
+                    transient_ = false;
                     fputs("\033[2J\033[H", stdout);
                     fflush(stdout);
                     redraw(prompt, buf, cur);
@@ -410,6 +441,7 @@ bool LineEditor::edit(std::string& out, const std::string& prompt) {
                 }
             }
         } else {
+            transient_ = false;
             histIndex_ = -1;
             insertChar(buf, cur, (char)key);
             redraw(prompt, buf, cur);

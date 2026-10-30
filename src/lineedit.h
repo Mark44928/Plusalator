@@ -18,6 +18,11 @@ public:
     // Right-aligned status rendered on the active line (dim). Set before each edit().
     void setRightStatus(const std::string& s) { rightStatus_ = s; }
 
+    // Transient state (e.g. buffer just cleared): redraw renders a dim prompt with a
+    // short dim rule above it.
+    void setTransient(bool t) { transient_ = t; }
+    void setTransientPrompt(const std::string& s) { transientPrompt_ = s; }
+
 private:
     bool isTty_;
     std::string histPath_;
@@ -25,6 +30,9 @@ private:
     int histIndex_ = -1;
     std::string navPrefix_;
     std::string rightStatus_;
+    bool transient_ = false;
+    bool wasTransient_ = false;
+    std::string transientPrompt_;
 
     struct termios origTty_;
     bool ttyRaw_ = false;
