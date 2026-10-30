@@ -219,7 +219,7 @@ int main(int argc, char** argv) {
         edit.setTransientPrompt(transientPromptText());
         std::string line;
         if (!edit.edit(line, promptText())) break; // Ctrl+D on empty -> quit
-        if (line.empty()) { printLine1(); continue; }
+        if (line.empty()) { continue; }
         if (line == "quit" || line == "exit" || line == "q") break;
 
         std::cout << "\r\033[K" << escDim() << "⟨ ·· ⟩ ➤ " << line << escReset() << "\n";
@@ -303,7 +303,7 @@ int main(int argc, char** argv) {
                 std::cout << escDim() << "current: " << cur->name << " (use: theme <name>)" << escReset() << "\n";
             } else {
                 const Theme* nt = findTheme(arg);
-                if (nt) { cur = nt; printLine1(); }
+                if (nt) { cur = nt; }
                 else std::cout << esc( cur->er, cur->eg, cur->eb) << "unknown theme: " << arg << escReset() << "\n";
             }
         } else if (cmd == "quit" || cmd == "exit" || cmd == "q") {
@@ -324,7 +324,6 @@ int main(int argc, char** argv) {
                 std::cout << esc( cur->er, cur->eg, cur->eb) << err.what() << escReset() << "\n";
             }
         }
-        printLine1();
     }
     std::cout << "\n";
     return 0;
