@@ -46,6 +46,9 @@ otherwise `/tmp` on Linux. History is always `$HOME/.plusalator_history`.
 - Errors print a caret under the offending token, exit code 0, never crash/hang
   (fuzz-gated).
 
+On startup, a dim hint reminds you to type `help` for commands. Type any
+expression to calculate immediately.
+
 ## REPL
 
 - Raw-mode line editor on TTYs; `getline` fallback when stdin is not a TTY.

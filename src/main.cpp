@@ -141,6 +141,8 @@ int main(int argc, char** argv) {
 
     printBanner();
     setStatus();
+    std::cout << escDim() << "Tip: type " << escBold() << "help" << escReset()
+              << escDim() << " for commands, or enter an expression to calculate." << escReset() << "\n";
 
     while (true) {
         std::string line;
