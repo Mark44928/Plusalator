@@ -316,6 +316,8 @@ int main(int argc, char** argv) {
                 {"constants", "list built-in constants"},
                 {"reset", "clear user vars & functions"},
                 {"del <name>", "delete a variable or function"},
+                {"config", "show config path and active theme"},
+                {"version / about", "show version and build info"},
                 {"quit / exit / q", "exit the REPL"},
             };
             for (auto& row : rows) {
@@ -395,6 +397,14 @@ int main(int argc, char** argv) {
                     std::cout << esc( cur->er, cur->eg, cur->eb) << "no such variable or function: " << arg << escReset() << "\n";
                 }
             }
+        } else if (cmd == "config") {
+            std::cout << escDim() << "config: " << configPath() << escReset() << "\n";
+            std::cout << esc( cur->pr, cur->pg, cur->pb) << "theme" << escReset()
+                      << " = " << esc( cur->rr, cur->rg, cur->rb) << cur->name << escReset() << "\n";
+        } else if (cmd == "version" || cmd == "about") {
+            std::cout << escBold() << esc( cur->pr, cur->pg, cur->pb) << "plusalator 1.0.0" << escReset() << "\n";
+            std::cout << escDim() << "Fancy interactive C++17 calculator REPL — stdlib only, Qalculate-flavored engine." << escReset() << "\n";
+            std::cout << escDim() << "Theme: " << cur->name << " · config: " << configPath() << escReset() << "\n";
         } else if (cmd == "clear") {
             std::cout << "\033[2J\033[3J\033[H";
             printBanner();

@@ -83,7 +83,8 @@ expression to calculate immediately.
 
 `help` (boxed two-column) · `vars` · `funcs` (signatures) · `history` · `clear` ·
 `theme [name]` · `ans` (last answer) · `constants` · `reset` (clear user state) ·
-`del <name>` · `q`/`quit`/`exit`.
+`del <name>` · `config` (config path + theme) · `version` / `about` ·
+`q`/`quit`/`exit`.
 
 ## --eval
 
