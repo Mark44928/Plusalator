@@ -4,11 +4,11 @@ Fancy interactive C++17 calculator REPL for Termux. Standard library only,
 single binary. Engine semantics faithfully modeled on Qalculate (qalc).
 
 ```
-plusa❯ 2+3*4
+⟨ plusa ⟩ ➤ 2+3*4
 = 14
-plusa❯ 200+10%
+⟨ plusa ⟩ ➤ 200+10%
 = 220
-plusa❯ f(x)=x^2+1;f(3)
+⟨ plusa ⟩ ➤ f(x)=x^2+1;f(3)
 = 10
 ```
 
@@ -60,15 +60,18 @@ expression to calculate immediately.
 - Ghost autosuggest (fish-style): dim history suffix after the cursor; accept with
   Right (at end) or Ctrl+F.
 - Bracketed paste inserted literally, never auto-executes.
-- Transient prompt: full prompt on the active line only; after Enter the line redraws
-  as a dim `» ` mark.
+- Transient prompt: full ornament `⟨ plusa ⟩ ➤` on the active line only; after Enter
+  the line redraws dim `⟨ ·· ⟩ ➤ <input>`; Ctrl+C clear shows a dim transient prompt
+  with a short dim rule above.
 
 ## Prompt & visuals
 
-- Active prompt: themed bold glyph + input; right side (dim, right-aligned) shows
-  theme name · live variable count.
+- LINE 1: full-width `─` gradient rule (hint→accent→hint) with right-side dim status
+  `theme · N vars`, printed each cycle.
+- Active prompt: `⟨ plusa ⟩ ➤` — U+27E8/27E9 brackets in accent, `plusa` in hint
+  italic, U+27A9 arrow in accent+bold; flashes rose once on error.
 - Result: `= <value>`, bold number, 10 sig figs, zeros trimmed, integers bare.
-- Error: caret line; next glyph flashes rose once.
+- Error: caret line under the offending token; next prompt glyph flashes rose once.
 - Banner: embedded figlet output, rows colored with a top→bottom gradient at runtime.
 - Themes (6 truecolor hexes each: prompt/result/error/hint/rule/accent):
   **greenit** (default), mono, ocean, ember, sakura.
