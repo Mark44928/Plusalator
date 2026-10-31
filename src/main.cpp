@@ -323,9 +323,12 @@ int main(int argc, char** argv) {
             for (auto& row : rows) {
                 std::cout << esc( cur->vr, cur->vg, cur->vb) << "│ " << escBold()
                           << esc( cur->pr, cur->pg, cur->pb) << row.c;
-                std::cout << std::string(LC - row.c.size(), ' ') << escReset();
-                std::cout << esc( cur->vr, cur->vg, cur->vb) << " │ " << row.d;
-                std::cout << std::string(RC - row.d.size(), ' ')
+                size_t lcPad = row.c.size() < (size_t)LC ? (size_t)LC - row.c.size() : 0;
+                std::cout << std::string(lcPad, ' ') << escReset();
+                std::string disp = row.d.size() > (size_t)RC ? row.d.substr(0, RC - 1) + "~" : row.d;
+                std::cout << esc( cur->vr, cur->vg, cur->vb) << " │ " << disp;
+                size_t rcPad = disp.size() < (size_t)RC ? (size_t)RC - disp.size() : 0;
+                std::cout << std::string(rcPad, ' ')
                           << esc( cur->vr, cur->vg, cur->vb) << "│" << escReset() << "\n";
             }
             std::cout << esc( cur->vr, cur->vg, cur->vb) << "└" << rep(W - 2, "─") << "┘" << escReset() << "\n";
