@@ -460,7 +460,7 @@ int main(int argc, char** argv) {
                         const Theme* nt = nullptr;
                         try { int n = std::stoi(pick); if (n >= 1 && n <= (int)ALL_THEMES.size()) nt = &ALL_THEMES[n - 1]; } catch (...) {}
                         if (!nt) nt = findTheme(pick);
-                        if (nt) { cur = nt; saveConfigTheme(nt->name); printLine1(); break; }
+                        if (nt) { cur = nt; saveConfigTheme(nt->name); break; }
                         std::cout << esc(cur->er, cur->eg, cur->eb) << "unknown theme: " << pick << escReset() << "\n";
                     }
                 } else if (choice == "config" || choice == "2") {
