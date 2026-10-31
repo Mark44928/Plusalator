@@ -75,15 +75,15 @@ expression to calculate immediately.
 - Banner: embedded figlet output, rows colored with a top→bottom gradient at runtime.
 - Themes (6 truecolor hexes each: prompt/result/error/hint/rule/accent):
   **greenit** (default), mono, ocean, ember, sakura.
-- `theme` lists themes with swatches; `theme <name>` switches theme and saves it to
+- `theme` lists themes with swatches; `settings` switches theme and saves it to
   `$HOME/.config/plusalator/config` so it persists across sessions.
 - `NO_COLOR` or `TERM=dumb` strips all formatting.
 
 ## Commands
 
 `help` (boxed two-column) · `vars` · `funcs` (signatures) · `history` · `clear` ·
-`theme [name]` · `ans` (last answer) · `constants` · `reset` (clear user state) ·
-`del <name>` · `config` (config path + theme) · `version` / `about` ·
+`settings` (interactive menu to switch theme) · `theme` (list themes) · `ans` (last answer)
+· `constants` · `reset` (clear user state) · `del <name>` · `config` · `version` / `about` ·
 `q`/`quit`/`exit`.
 
 ## --eval

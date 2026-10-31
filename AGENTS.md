@@ -30,9 +30,10 @@ embedded figlet banner in src/banner.h.
 - Bracketed paste inserts literally, never auto-executes.
 - Transient prompt: full ornament ⟨ plusa ⟩ ➤ on active line only; executed lines redraw
   dim `⟨ ·· ⟩ ➤ <input>`; Ctrl+C clear shows dim transient prompt with short dim rule above.
-- Commands: `help` `vars` `funcs` `history` `clear` `theme [name]` `ans` (last answer)
-  `constants` (built-ins) `reset` (clear user vars/funcs) `del <name>` (remove var/func)
-  `config` (config path + active theme) `version` / `about` `quit`/`exit`/`q`.
+- Commands: `help` `vars` `funcs` `history` `clear` `theme` (list) `settings` (switch theme)
+  `ans` (last answer) `constants` (built-ins) `reset` (clear user vars/funcs) `del <name>`
+  (remove var/func) `config` (config path + active theme) `version` / `about`
+  `quit`/`exit`/`q`.
 
 # Visual laws
 - NO hand-drawn ASCII art — banner is embedded figlet output (src/banner.h), runtime
@@ -41,7 +42,7 @@ embedded figlet banner in src/banner.h.
 - Prompt ornament glyphs are standard BMP (U+27E8/27E9 ⟨⟩, U+27A9 ➤, U+00B7 ·),
   never nerd-font PUA codepoints.
 - Right-side dim status on line 1: theme · N vars; themes: greenit (default), mono,
-  ocean, ember, sakura; `theme <name>` switches theme and persists it to
+  ocean, ember, sakura; `settings` switches theme and persists it to
   `$HOME/.config/plusalator/config` across sessions.
 
 # Examples

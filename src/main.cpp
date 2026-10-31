@@ -311,7 +311,7 @@ int main(int argc, char** argv) {
                 {"history", "show command history"},
                 {"clear", "clear screen and re-banner"},
                 {"theme", "list available themes"},
-                {"theme <name>", "switch theme (saved to config)"},
+                {"settings", "interactive settings menu (switch theme)"},
                 {"ans", "show last answer"},
                 {"constants", "list built-in constants"},
                 {"reset", "clear user vars & functions"},
@@ -409,18 +409,63 @@ int main(int argc, char** argv) {
             std::cout << "\033[2J\033[3J\033[H";
             printBanner();
         } else if (cmd == "theme") {
-            if (arg.empty()) {
-                for (auto& t : ALL_THEMES) {
-                    bool isCur = (&t == cur);
-                    std::cout << (isCur ? "* " : "  ");
-                    put(std::cout, {t.name, &t, t.pr, t.pg, t.pb, true});
-                    std::cout << "  " << esc( t.ar, t.ag, t.ab) << "████" << escReset() << " " << t.name << "\n";
+            for (auto& t : ALL_THEMES) {
+                bool isCur = (&t == cur);
+                std::cout << (isCur ? "* " : "  ");
+                put(std::cout, {t.name, &t, t.pr, t.pg, t.pb, true});
+                std::cout << "  " << esc( t.ar, t.ag, t.ab) << "████" << escReset() << " " << t.name << "\n";
+            }
+            std::cout << escDim() << "current: " << cur->name << " — use 'settings' to switch theme" << escReset() << "\n";
+        } else if (cmd == "settings") {
+            while (true) {
+                printLine1();
+                std::cout << escBold() << esc(cur->pr, cur->pg, cur->pb) << "⚙ settings" << escReset() << "\n";
+                std::cout << escDim() << "  1 · theme    current: " << cur->name << escReset() << "\n";
+                std::cout << escDim() << "  2 · config   " << configPath() << escReset() << "\n";
+                std::cout << escDim() << "  3 · back" << escReset() << "\n";
+                std::string choice;
+                if (!edit.edit(choice, transientPromptText())) break;
+                size_t c0 = choice.find_first_not_of(" \t");
+                size_t c1 = choice.find_last_not_of(" \t");
+                if (c0 == std::string::npos) continue;
+                choice = choice.substr(c0, c1 - c0 + 1);
+                if (choice == "back" || choice == "3" || choice == "q" || choice == "quit") break;
+                if (choice == "theme" || choice == "1") {
+                    while (true) {
+                        printLine1();
+                        std::cout << escBold() << esc(cur->pr, cur->pg, cur->pb) << "⚙ settings › theme" << escReset() << "\n";
+                        int idx = 0;
+                        for (auto& t : ALL_THEMES) {
+                            std::cout << escDim() << "  " << (++idx) << escReset() << " ";
+                            put(std::cout, {t.name, &t, t.pr, t.pg, t.pb, true});
+                            std::cout << escReset() << "  " << esc(t.ar, t.ag, t.ab) << "████" << escReset() << " " << t.name;
+                            if (&t == cur) std::cout << escDim() << "  ← current" << escReset();
+                            std::cout << "\n";
+                        }
+                        std::cout << escDim() << "  0 · back" << escReset() << "\n";
+                        std::string pick;
+                        if (!edit.edit(pick, transientPromptText())) break;
+                        size_t p0 = pick.find_first_not_of(" \t");
+                        size_t p1 = pick.find_last_not_of(" \t");
+                        if (p0 == std::string::npos) continue;
+                        pick = pick.substr(p0, p1 - p0 + 1);
+                        if (pick == "back" || pick == "0" || pick == "q") break;
+                        const Theme* nt = nullptr;
+                        try { int n = std::stoi(pick); if (n >= 1 && n <= (int)ALL_THEMES.size()) nt = &ALL_THEMES[n - 1]; } catch (...) {}
+                        if (!nt) nt = findTheme(pick);
+                        if (nt) { cur = nt; saveConfigTheme(nt->name); printLine1(); break; }
+                        std::cout << esc(cur->er, cur->eg, cur->eb) << "unknown theme: " << pick << escReset() << "\n";
+                    }
+                } else if (choice == "config" || choice == "2") {
+                    printLine1();
+                    std::cout << escDim() << "config: " << configPath() << escReset() << "\n";
+                    std::cout << esc(cur->pr, cur->pg, cur->pb) << "theme" << escReset()
+                              << " = " << esc(cur->rr, cur->rg, cur->rb) << cur->name << escReset() << "\n";
+                    std::string wait;
+                    edit.edit(wait, transientPromptText());
+                } else {
+                    std::cout << esc(cur->er, cur->eg, cur->eb) << "unknown setting: " << choice << escReset() << "\n";
                 }
-                std::cout << escDim() << "current: " << cur->name << " (use: theme <name>)" << escReset() << "\n";
-            } else {
-                const Theme* nt = findTheme(arg);
-                if (nt) { cur = nt; saveConfigTheme(nt->name); }
-                else std::cout << esc( cur->er, cur->eg, cur->eb) << "unknown theme: " << arg << escReset() << "\n";
             }
         } else if (cmd == "quit" || cmd == "exit" || cmd == "q") {
             break;
