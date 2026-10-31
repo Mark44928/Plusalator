@@ -30,6 +30,9 @@ embedded figlet banner in src/banner.h.
 - Bracketed paste inserts literally, never auto-executes.
 - Transient prompt: full ornament ⟨ plusa ⟩ ➤ on active line only; executed lines redraw
   dim `⟨ ·· ⟩ ➤ <input>`; Ctrl+C clear shows dim transient prompt with short dim rule above.
+- Commands: `help` `vars` `funcs` `history` `clear` `theme [name]` `ans` (last answer)
+  `constants` (built-ins) `reset` (clear user vars/funcs) `del <name>` (remove var/func)
+  `quit`/`exit`/`q`.
 
 # Visual laws
 - NO hand-drawn ASCII art — banner is embedded figlet output (src/banner.h), runtime

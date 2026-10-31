@@ -312,6 +312,10 @@ int main(int argc, char** argv) {
                 {"clear", "clear screen and re-banner"},
                 {"theme", "list available themes"},
                 {"theme <name>", "switch theme (saved to config)"},
+                {"ans", "show last answer"},
+                {"constants", "list built-in constants"},
+                {"reset", "clear user vars & functions"},
+                {"del <name>", "delete a variable or function"},
                 {"quit / exit / q", "exit the REPL"},
             };
             for (auto& row : rows) {
@@ -347,6 +351,49 @@ int main(int argc, char** argv) {
             }
             for (size_t i = 0; i < h.size(); i++) {
                 std::cout << escDim() << (i + 1) << escReset() << "  " << h[i] << "\n";
+            }
+        } else if (cmd == "ans") {
+            std::cout << esc( cur->pr, cur->pg, cur->pb) << "ans" << escReset()
+                      << " = " << esc( cur->rr, cur->rg, cur->rb)
+                      << formatNumber(ctx.vars.at("ans")) << escReset() << "\n";
+        } else if (cmd == "constants") {
+            static const std::vector<std::pair<std::string, double>> consts = {
+                {"pi", 3.14159265358979323846},
+                {"tau", 6.28318530717958647692},
+                {"e", 2.71828182845904523536},
+                {"phi", 1.61803398874989484820},
+            };
+            for (auto& c : consts) {
+                std::cout << esc( cur->pr, cur->pg, cur->pb) << c.first << escReset()
+                          << " = " << esc( cur->rr, cur->rg, cur->rb)
+                          << formatNumber(c.second) << escReset() << "\n";
+            }
+        } else if (cmd == "reset") {
+            static const std::vector<std::string> keep = {"pi", "tau", "e", "phi", "ans"};
+            for (auto it = ctx.vars.begin(); it != ctx.vars.end(); ) {
+                bool protected_ = false;
+                for (auto& k : keep) if (it->first == k) { protected_ = true; break; }
+                if (protected_) { it->second = (it->first == "ans") ? 0.0 : it->second; ++it; }
+                else it = ctx.vars.erase(it);
+            }
+            ctx.funcs.clear();
+            std::cout << escDim() << "state reset" << escReset() << "\n";
+        } else if (cmd == "del") {
+            if (arg.empty()) {
+                std::cout << esc( cur->er, cur->eg, cur->eb) << "usage: del <name>" << escReset() << "\n";
+            } else {
+                static const std::vector<std::string> protect = {"pi", "tau", "e", "phi", "ans"};
+                bool protected_ = false;
+                for (auto& k : protect) if (arg == k) { protected_ = true; break; }
+                if (protected_) {
+                    std::cout << esc( cur->er, cur->eg, cur->eb) << "cannot delete built-in: " << arg << escReset() << "\n";
+                } else if (ctx.vars.erase(arg)) {
+                    std::cout << escDim() << "deleted variable: " << arg << escReset() << "\n";
+                } else if (ctx.funcs.erase(arg)) {
+                    std::cout << escDim() << "deleted function: " << arg << escReset() << "\n";
+                } else {
+                    std::cout << esc( cur->er, cur->eg, cur->eb) << "no such variable or function: " << arg << escReset() << "\n";
+                }
             }
         } else if (cmd == "clear") {
             std::cout << "\033[2J\033[3J\033[H";

@@ -82,7 +82,8 @@ expression to calculate immediately.
 ## Commands
 
 `help` (boxed two-column) · `vars` · `funcs` (signatures) · `history` · `clear` ·
-`theme [name]` · `q`/`quit`/`exit`.
+`theme [name]` · `ans` (last answer) · `constants` · `reset` (clear user state) ·
+`del <name>` · `q`/`quit`/`exit`.
 
 ## --eval
 
