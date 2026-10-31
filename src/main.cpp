@@ -228,6 +228,10 @@ int main(int argc, char** argv) {
     };
 
     auto printLine1 = [&cur, &ctx]() {
+        // Clear the current line (in case the cursor is mid-prompt from a prior
+        // edit), then draw the gradient rule + right-side dim status on its own
+        // line, and advance so the prompt lands on the next line.
+        std::cout << "\r\033[2K";
         int w = termWidth();
         std::string status = cur->name + " · " + std::to_string((int)ctx.vars.size()) + " vars";
         size_t slen = dispWidth(status);
