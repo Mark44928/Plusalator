@@ -461,7 +461,7 @@ int main(int argc, char** argv) {
                         try { int n = std::stoi(pick); if (n >= 1 && n <= (int)ALL_THEMES.size()) nt = &ALL_THEMES[n - 1]; } catch (...) {}
                         if (!nt) nt = findTheme(pick);
                         if (nt) { cur = nt; saveConfigTheme(nt->name); break; }
-                        std::cout << esc(cur->er, cur->eg, cur->eb) << "unknown theme: " << pick << escReset() << "\n";
+                        std::cout << "\n" << esc(cur->er, cur->eg, cur->eb) << "unknown theme: " << pick << escReset() << "\n";
                     }
                 } else if (choice == "config" || choice == "2") {
                     printLine1();
@@ -471,7 +471,7 @@ int main(int argc, char** argv) {
                     std::string wait;
                     if (!edit.edit(wait, promptText())) break;
                 } else {
-                    std::cout << esc(cur->er, cur->eg, cur->eb) << "unknown setting: " << choice << escReset() << "\n";
+                    std::cout << "\n" << esc(cur->er, cur->eg, cur->eb) << "unknown setting: " << choice << escReset() << "\n";
                 }
             }
         } else if (cmd == "quit" || cmd == "exit" || cmd == "q") {
