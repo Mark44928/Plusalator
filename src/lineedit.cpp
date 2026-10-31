@@ -370,6 +370,7 @@ bool LineEditor::edit(std::string& out, const std::string& prompt) {
                     cur = 0;
                     histIndex_ = -1;
                     transient_ = true;
+                    wasTransient_ = true;
                     redraw(prompt, buf, cur);
                     break;
                 }
@@ -446,6 +447,7 @@ bool LineEditor::edit(std::string& out, const std::string& prompt) {
             insertChar(buf, cur, (char)key);
             redraw(prompt, buf, cur);
         }
+        wasTransient_ = transient_;
     }
 
 done:

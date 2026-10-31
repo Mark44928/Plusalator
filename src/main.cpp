@@ -469,7 +469,7 @@ int main(int argc, char** argv) {
                     std::cout << esc(cur->pr, cur->pg, cur->pb) << "theme" << escReset()
                               << " = " << esc(cur->rr, cur->rg, cur->rb) << cur->name << escReset() << "\n";
                     std::string wait;
-                    edit.edit(wait, promptText());
+                    if (!edit.edit(wait, promptText())) break;
                 } else {
                     std::cout << esc(cur->er, cur->eg, cur->eb) << "unknown setting: " << choice << escReset() << "\n";
                 }
