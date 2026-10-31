@@ -3,8 +3,11 @@
 #include "banner.h"
 #include <iostream>
 #include <string>
+#include <fstream>
 #include <unistd.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <cerrno>
 #include <cstdio>
 #include <algorithm>
 #include <cmath>
@@ -53,6 +56,52 @@ static const std::vector<Theme> ALL_THEMES = {
 static const Theme* findTheme(const std::string& name) {
     for (auto& t : ALL_THEMES) if (t.name == name) return &t;
     return nullptr;
+}
+
+static std::string configPath() {
+    const char* home = getenv("HOME");
+    std::string base = home ? home : std::string(".");
+    return base + "/.config/plusalator/config";
+}
+
+// Return persisted theme name from config file, or "" if missing/invalid.
+static std::string loadConfigTheme() {
+    std::ifstream f(configPath());
+    if (!f) return "";
+    std::string line;
+    while (std::getline(f, line)) {
+        size_t a = line.find_first_not_of(" \t\r\n");
+        if (a == std::string::npos) continue;
+        if (line[a] == '#' || line[a] == '/') continue; // comment
+        size_t eq = line.find('=');
+        if (eq == std::string::npos) continue;
+        std::string key = line.substr(0, eq);
+        size_t ks = key.find_first_not_of(" \t");
+        size_t ke = key.find_last_not_of(" \t");
+        if (ks == std::string::npos) continue;
+        key = key.substr(ks, ke - ks + 1);
+        if (key != "theme") continue;
+        std::string val = line.substr(eq + 1);
+        size_t vs = val.find_first_not_of(" \t");
+        size_t ve = val.find_last_not_of(" \t\r\n");
+        if (vs == std::string::npos) return "";
+        return val.substr(vs, ve - vs + 1);
+    }
+    return "";
+}
+
+// Persist theme name to config file (creates dir as needed).
+static bool saveConfigTheme(const std::string& name) {
+    std::string path = configPath();
+    size_t slash = path.find_last_of('/');
+    if (slash != std::string::npos) {
+        std::string dir = path.substr(0, slash);
+        if (mkdir(dir.c_str(), 0700) != 0 && errno != EEXIST) return false;
+    }
+    std::ofstream f(path, std::ios::trunc);
+    if (!f) return false;
+    f << "theme=" << name << "\n";
+    return f.good();
 }
 
 static std::string esc(int r, int g, int b) {
@@ -131,6 +180,16 @@ int main(int argc, char** argv) {
     }
 
     const Theme* cur = &ALL_THEMES[0];
+
+    // Load persisted theme from config file (falls back to greenit default).
+    {
+        std::string saved = loadConfigTheme();
+        if (!saved.empty()) {
+            const Theme* nt = findTheme(saved);
+            if (nt) cur = nt;
+        }
+    }
+
     Context ctx;
     LineEditor edit;
 
@@ -252,7 +311,7 @@ int main(int argc, char** argv) {
                 {"history", "show command history"},
                 {"clear", "clear screen and re-banner"},
                 {"theme", "list available themes"},
-                {"theme <name>", "switch theme (session-only)"},
+                {"theme <name>", "switch theme (saved to config)"},
                 {"quit / exit / q", "exit the REPL"},
             };
             for (auto& row : rows) {
@@ -303,7 +362,7 @@ int main(int argc, char** argv) {
                 std::cout << escDim() << "current: " << cur->name << " (use: theme <name>)" << escReset() << "\n";
             } else {
                 const Theme* nt = findTheme(arg);
-                if (nt) { cur = nt; }
+                if (nt) { cur = nt; saveConfigTheme(nt->name); }
                 else std::cout << esc( cur->er, cur->eg, cur->eb) << "unknown theme: " << arg << escReset() << "\n";
             }
         } else if (cmd == "quit" || cmd == "exit" || cmd == "q") {

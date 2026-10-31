@@ -38,7 +38,8 @@ embedded figlet banner in src/banner.h.
 - Prompt ornament glyphs are standard BMP (U+27E8/27E9 ⟨⟩, U+27A9 ➤, U+00B7 ·),
   never nerd-font PUA codepoints.
 - Right-side dim status on line 1: theme · N vars; themes: greenit (default), mono,
-  ocean, ember, sakura; `theme <name>` session-only.
+  ocean, ember, sakura; `theme <name>` switches theme and persists it to
+  `$HOME/.config/plusalator/config` across sessions.
 
 # Examples
 - ✅ Correct: changing a builtin's behavior → edit src/calc.cpp → add/update assertion in

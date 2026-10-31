@@ -75,7 +75,8 @@ expression to calculate immediately.
 - Banner: embedded figlet output, rows colored with a top→bottom gradient at runtime.
 - Themes (6 truecolor hexes each: prompt/result/error/hint/rule/accent):
   **greenit** (default), mono, ocean, ember, sakura.
-- `theme` lists themes with swatches; `theme <name>` switches session-only.
+- `theme` lists themes with swatches; `theme <name>` switches theme and saves it to
+  `$HOME/.config/plusalator/config` so it persists across sessions.
 - `NO_COLOR` or `TERM=dumb` strips all formatting.
 
 ## Commands
