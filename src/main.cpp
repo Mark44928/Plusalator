@@ -431,7 +431,7 @@ int main(int argc, char** argv) {
                 std::cout << escDim() << "  2 · config   " << configPath() << escReset() << "\n";
                 std::cout << escDim() << "  3 · back" << escReset() << "\n";
                 std::string choice;
-                if (!edit.edit(choice, transientPromptText())) break;
+                if (!edit.edit(choice, promptText())) break;
                 size_t c0 = choice.find_first_not_of(" \t");
                 size_t c1 = choice.find_last_not_of(" \t");
                 if (c0 == std::string::npos) continue;
@@ -451,7 +451,7 @@ int main(int argc, char** argv) {
                         }
                         std::cout << escDim() << "  0 · back" << escReset() << "\n";
                         std::string pick;
-                        if (!edit.edit(pick, transientPromptText())) break;
+                        if (!edit.edit(pick, promptText())) break;
                         size_t p0 = pick.find_first_not_of(" \t");
                         size_t p1 = pick.find_last_not_of(" \t");
                         if (p0 == std::string::npos) continue;
@@ -469,7 +469,7 @@ int main(int argc, char** argv) {
                     std::cout << esc(cur->pr, cur->pg, cur->pb) << "theme" << escReset()
                               << " = " << esc(cur->rr, cur->rg, cur->rb) << cur->name << escReset() << "\n";
                     std::string wait;
-                    edit.edit(wait, transientPromptText());
+                    edit.edit(wait, promptText());
                 } else {
                     std::cout << esc(cur->er, cur->eg, cur->eb) << "unknown setting: " << choice << escReset() << "\n";
                 }
