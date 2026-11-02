@@ -1,5 +1,6 @@
-# Plusalator Makefile — portable: standard Linux defaults, Termux honored
-# via $PREFIX / $TMPDIR (set automatically in the Termux environment).
+# Plusalator Makefile — For Termux and Linux
+# Portable: standard Linux defaults, Termux honored via $PREFIX / $TMPDIR
+# (set automatically in the Termux environment).
 CXX ?= clang++
 CXXFLAGS := -Wall -Wextra -O2 -std=c++17
 
