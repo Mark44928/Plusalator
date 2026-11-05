@@ -199,7 +199,7 @@ int main(int argc, char** argv) {
                       << "Usage: plusalator [--eval <expr>]\n";
             return 0;
         } else if (a == "--version") {
-            std::cout << "plusalator 1.0.0\n";
+            std::cout << "plusalator 1.1.0\n";
             return 0;
         } else if (a == "--eval" && i + 1 < argc) {
             Context ctx;
@@ -469,7 +469,7 @@ int main(int argc, char** argv) {
             std::cout << esc( cur->pr, cur->pg, cur->pb) << "theme" << escReset()
                       << " = " << esc( cur->rr, cur->rg, cur->rb) << cur->name << escReset() << "\n";
         } else if (cmd == "version" || cmd == "about") {
-            std::cout << escBold() << esc( cur->pr, cur->pg, cur->pb) << "plusalator 1.0.0" << escReset() << "\n";
+            std::cout << escBold() << esc( cur->pr, cur->pg, cur->pb) << "plusalator 1.1.0" << escReset() << "\n";
             std::cout << escDim() << "Fancy interactive C++17 calculator REPL — stdlib only, Qalculate-flavored engine." << escReset() << "\n";
             std::cout << escDim() << "Theme: " << cur->name << " · config: " << configPath() << escReset() << "\n";
         } else if (cmd == "clear") {
