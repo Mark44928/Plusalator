@@ -46,12 +46,50 @@ struct Theme {
 };
 
 static const std::vector<Theme> ALL_THEMES = {
+    // Original themes
     {"greenit", 0, 208, 64, 208, 208, 208, 255, 68, 68, 138, 138, 138, 74, 74, 74, 0, 208, 64},
     {"mono", 220, 220, 220, 240, 240, 240, 255, 80, 80, 130, 130, 130, 80, 80, 80, 220, 220, 220},
     {"ocean", 0, 180, 255, 240, 240, 240, 255, 100, 100, 150, 150, 150, 90, 90, 90, 0, 180, 255},
     {"ember", 255, 120, 40, 240, 240, 240, 255, 100, 80, 150, 150, 150, 90, 80, 70, 255, 120, 40},
     {"sakura", 255, 180, 220, 240, 240, 240, 255, 100, 140, 160, 140, 160, 100, 90, 100, 255, 180, 220},
     {"midnight", 150, 180, 255, 240, 240, 240, 255, 120, 150, 120, 120, 120, 60, 60, 80, 150, 180, 255},
+    
+    // Modern professional themes
+    // Nord - Arctic Ice Studio (frost palette, low saturation, high readability)
+    {"nord", 143, 188, 210, 236, 239, 244, 231, 76, 60, 170, 180, 190, 94, 129, 172, 88, 196, 248},
+    
+    // Catppuccin Mocha - Pastel colors, cozy aesthetic
+    {"catppuccin", 245, 224, 220, 245, 224, 220, 242, 170, 170, 205, 214, 244, 180, 190, 254, 249, 226, 175},
+    
+    // Tokyo Night - Dark theme with vibrant accents
+    {"tokyonight", 152, 195, 238, 224, 224, 224, 255, 85, 85, 139, 233, 253, 70, 70, 70, 100, 150, 255},
+    
+    // Dracula - Popular dark theme
+    {"dracula", 189, 147, 249, 224, 224, 224, 255, 85, 85, 128, 128, 128, 60, 60, 60, 142, 234, 255},
+    
+    // Gruvbox Dark - Retro groove with warm colors
+    {"gruvbox", 251, 241, 199, 251, 241, 199, 220, 57, 18, 129, 124, 88, 80, 80, 80, 251, 188, 45},
+    
+    // Solarized Dark - Scientific, colorblind-friendly
+    {"solarized", 147, 161, 161, 220, 220, 220, 220, 50, 47, 101, 123, 167, 83, 119, 122, 38, 139, 210},
+    
+    // Cyberpunk - Neon aesthetic
+    {"cyberpunk", 0, 255, 255, 220, 220, 220, 255, 0, 150, 150, 50, 200, 80, 80, 200, 0, 255, 255},
+    
+    // Matrix - Green on black, classic hacker look
+    {"matrix", 0, 255, 43, 0, 255, 0, 0, 255, 0, 0, 100, 0, 0, 50, 50, 0, 255, 43},
+    
+    // Sunset - Warm orange/pink gradient
+    {"sunset", 255, 154, 77, 255, 255, 255, 255, 100, 50, 255, 180, 100, 120, 80, 60, 255, 119, 197},
+    
+    // Aurora - Purple/blue/pink palette
+    {"aurora", 180, 140, 255, 240, 240, 240, 255, 100, 200, 160, 140, 200, 90, 80, 120, 140, 100, 255},
+    
+    // Neon - Bright glowing colors
+    {"neon", 0, 255, 255, 255, 255, 255, 255, 0, 150, 0, 255, 255, 100, 0, 255, 0, 255, 255},
+    
+    // Retro - CRT monitor aesthetic (amber on dark)
+    {"retro", 255, 191, 0, 220, 220, 220, 255, 150, 0, 100, 80, 50, 50, 50, 50, 255, 215, 0},
 };
 
 static const Theme* findTheme(const std::string& name) {
@@ -266,11 +304,29 @@ int main(int argc, char** argv) {
         int n = (int)rows.size();
         for (int i = 0; i < n; i++) {
             if (rows[i].empty()) { std::cout << "\n"; continue; }
+            // Enhanced multi-gradient: accent -> prompt -> result -> accent
             double f = (n > 1) ? (double)i / (double)(n - 1) : 0.0;
-            int r = (int)(cur->ar * (1 - f) + cur->pr * f);
-            int g = (int)(cur->ag * (1 - f) + cur->pg * f);
-            int b = (int)(cur->ab * (1 - f) + cur->pb * f);
-            std::cout << esc( r, g, b) << rows[i] << escReset() << "\n";
+            int r, g, b;
+            if (f < 0.33) {
+                // Top third: accent to prompt
+                double t = f * 3.0;
+                r = (int)(cur->ar * (1 - t) + cur->pr * t);
+                g = (int)(cur->ag * (1 - t) + cur->pg * t);
+                b = (int)(cur->ab * (1 - t) + cur->pb * t);
+            } else if (f < 0.66) {
+                // Middle third: prompt to result
+                double t = (f - 0.33) * 3.0;
+                r = (int)(cur->pr * (1 - t) + cur->rr * t);
+                g = (int)(cur->pg * (1 - t) + cur->rg * t);
+                b = (int)(cur->pb * (1 - t) + cur->rb * t);
+            } else {
+                // Bottom third: result to accent
+                double t = (f - 0.66) * 3.0;
+                r = (int)(cur->rr * (1 - t) + cur->ar * t);
+                g = (int)(cur->rg * (1 - t) + cur->ag * t);
+                b = (int)(cur->rb * (1 - t) + cur->ab * t);
+            }
+            std::cout << escBold() << esc(r, g, b) << rows[i] << escReset() << "\n";
         }
     };
 

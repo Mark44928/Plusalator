@@ -1,4 +1,4 @@
-# Plusalator v1.0.0
+# Plusalator v1.1.0 - Enhanced Visuals Edition
 
 Fancy interactive C++17 calculator REPL. Standard library only, single binary.
 Engine semantics faithfully modeled on Qalculate (qalc).
@@ -70,6 +70,8 @@ keyboard navigation, history, and ghost autosuggest.
 
 ## Prompt & Visuals
 
+**NEW:** Completely revamped visual experience with 10 additional modern themes inspired by popular color schemes (Nord, Catppuccin, Tokyo Night, Dracula, Gruvbox, Solarized, Cyberpunk, Matrix, Sunset, Aurora, Neon, Retro). The banner now features a sophisticated multi-gradient color transition, and the status line shows both variable and function counts for better context.
+
 - **Line 1:** full-width `─` gradient rule (hint→accent→hint) with right-side dim status
   showing `theme · N vars`, printed each cycle
 - **Active prompt:** `⟨ plusa ⟩ ➤` — U+27E8/27E9 brackets in accent color, `plusa` in hint
@@ -77,13 +79,25 @@ keyboard navigation, history, and ghost autosuggest.
 - **Result:** `= <value>`, bold number, 10 significant figures, trailing zeros trimmed, integers bare
 - **Error:** caret line under the offending token; next prompt glyph flashes rose once
 - **Banner:** embedded figlet output, rows colored with a top→bottom gradient at runtime
-- **Themes:** 6 built-in truecolor themes (6 hex colors each: prompt/result/error/hint/rule/accent):
+- **Themes:** 16 built-in truecolor themes (6 hex colors each: prompt/result/error/hint/rule/accent):
   - **greenit** (default) — vibrant green on dark background
   - **mono** — clean monochrome grayscale
   - **ocean** — bright blue/cyan palette
   - **ember** — warm orange/red tones
   - **sakura** — soft pink/purple aesthetic
   - **midnight** — deep blue/purple night theme
+  - **nord** — Arctic Ice Studio frost palette, low saturation, high readability
+  - **catppuccin** — pastel colors, cozy aesthetic
+  - **tokyonight** — dark theme with vibrant blue/purple accents
+  - **dracula** — popular dark theme with purple accent
+  - **gruvbox** — retro groove with warm earth tones
+  - **solarized** — scientific, colorblind-friendly palette
+  - **cyberpunk** — neon aesthetic with cyan/blue glow
+  - **matrix** — classic green-on-black hacker look
+  - **sunset** — warm orange/pink gradient
+  - **aurora** — purple/blue/pink palette
+  - **neon** — bright glowing colors
+  - **retro** — CRT monitor aesthetic (amber on dark)
 - **Theme commands:** `theme` lists themes with color swatches; `settings` provides interactive
   menu to switch theme and saves to `$HOME/.config/plusalator/config` for persistence
 - **Color control:** `NO_COLOR` environment variable or `TERM=dumb` strips all ANSI formatting

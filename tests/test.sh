@@ -3,7 +3,7 @@
 # Exit code: 0 if all pass, non-zero otherwise.
 set -euo pipefail
 
-TMPDIR=/data/data/com.termux/files/usr/tmp
+TMPDIR=${TMPDIR:-/tmp}
 export TMPDIR
 mkdir -p "$TMPDIR"
 
