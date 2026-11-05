@@ -272,7 +272,7 @@ int main(int argc, char** argv) {
         // line, and advance so the prompt lands on the next line.
         std::cout << "\r\033[2K";
         int w = termWidth();
-        std::string status = cur->name + " · " + std::to_string((int)ctx.vars.size()) + " vars";
+        std::string status = cur->name + " · " + std::to_string((int)ctx.vars.size()) + " vars " + std::to_string((int)ctx.funcs.size()) + " funcs";
         size_t slen = dispWidth(status);
         int ruleCells = w - (int)slen - 2;
         if (ruleCells < 0) ruleCells = 0;
@@ -322,6 +322,9 @@ int main(int argc, char** argv) {
             } else {
                 // Bottom third: result to accent
                 double t = (f - 0.66) * 3.0;
+                // Clamp t to [0, 1] to avoid negative interpolation
+                if (t < 0.0) t = 0.0;
+                if (t > 1.0) t = 1.0;
                 r = (int)(cur->rr * (1 - t) + cur->ar * t);
                 g = (int)(cur->rg * (1 - t) + cur->ag * t);
                 b = (int)(cur->rb * (1 - t) + cur->ab * t);
@@ -528,7 +531,13 @@ int main(int argc, char** argv) {
                     std::string wait;
                     if (!edit.edit(wait, promptText())) break;
                 } else {
-                    std::cout << "\n" << esc(cur->er, cur->eg, cur->eb) << "unknown setting: " << choice << escReset() << "\n";
+                    // Allow direct theme selection by number in settings menu
+                    const Theme* nt = nullptr;
+                    try { int n = std::stoi(choice); if (n >= 1 && n <= (int)ALL_THEMES.size()) nt = &ALL_THEMES[n - 1]; } catch (...) {}
+                    if (nt) { cur = nt; saveConfigTheme(nt->name); }
+                    else {
+                        std::cout << "\n" << esc(cur->er, cur->eg, cur->eb) << "unknown setting: " << choice << escReset() << "\n";
+                    }
                 }
             }
         } else if (cmd == "quit" || cmd == "exit" || cmd == "q") {
