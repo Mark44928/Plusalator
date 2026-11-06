@@ -301,6 +301,8 @@ int main(int argc, char** argv) {
             start = nl + 1;
         }
         while (!rows.empty() && rows.back().empty()) rows.pop_back();
+        // Also remove empty rows from the beginning
+        while (!rows.empty() && rows.front().empty()) rows.erase(rows.begin());
         int n = (int)rows.size();
         for (int i = 0; i < n; i++) {
             if (rows[i].empty()) { std::cout << "\n"; continue; }
