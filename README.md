@@ -3,6 +3,8 @@
 Fancy interactive C++17 calculator REPL. Standard library only, single binary.
 Engine semantics faithfully modeled on Qalculate (qalc).
 
+[![CI](https://github.com/Mark44928/Plusalator/actions/workflows/ci.yml/badge.svg)](https://github.com/Mark44928/Plusalator/actions/workflows/ci.yml)
+
 ```
 ⟨ plusa ⟩ ➤ 2+3*4
 = 14
