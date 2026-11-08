@@ -17,5 +17,3 @@ jobs:
       - name: Build and run the gate
         # g++ is guaranteed on the runner image; the Makefile honors CXX.
         run: make check CXX=g++
-</content>
-</invoke>
