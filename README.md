@@ -1,4 +1,4 @@
-# Plusalator v1.1.0 - Enhanced Visuals Edition
+# Plusalator v1.2.0 - Power Tools Edition
 
 Fancy interactive C++17 calculator REPL. Standard library only, single binary.
 Engine semantics faithfully modeled on Qalculate (qalc).
@@ -42,11 +42,11 @@ make install    # PREFIX-aware: $PREFIX on Termux, /usr/local on Linux by defaul
 - Implicit multiplication: `2x`, `2(3+4)`, `(2+3)(4+5)`, `2sin(pi/2)`, `3pi`, `x(3)`, `-2x`.
   Never between two numbers (`"2 3"` is a syntax error with a caret).
 - Number literals: `0x` hex, `0b` binary, `0o` octal.
-- Built-ins (radians): `sqrt`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `log` (base 10),
+- Built-ins (radians by default; `deg`/`rad`/`grad` switch the unit for trig and inverse trig): `sqrt`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `log` (base 10),
   `ln`, `exp`, `abs`, `floor`, `ceil`, `round`, `min(...)`, `max(...)`, `hypot(...)`,
   `pow(b,e)`, `mod(x,y)`.
 - Constants: `pi`, `tau`, `e`, `phi`. `ans` = last result.
-- Assignment `x=5`; user functions `f(x)=x^2+1` (cloned AST per call, depth cap 64,
+- Assignment `x=5`; user functions `f(x)=x^2+1` (body cloned once at definition, depth cap 64,
   graceful "recursion too deep", never a stack crash).
 - Errors print a caret under the offending token, exit code 0, never crash/hang (fuzz-gated).
 
@@ -60,7 +60,7 @@ keyboard navigation, history, and ghost autosuggest.
 - **Keys:**
   - Navigation: Left/Right/Home/End, Ctrl+A (beginning), Ctrl+E (end)
   - Editing: Backspace/Delete, Ctrl+U (delete to start), Ctrl+K (delete to end)
-  - Control: Ctrl+C (clears buffer, never exits), Ctrl+D (quits on empty buffer), Ctrl+L (clear screen + re-banner)
+  - Control: Ctrl+C (clears buffer, never exits), Ctrl+D (quits on empty buffer), Ctrl+L (clear screen + redraw the prompt)
   - Autocomplete: Ctrl+F (accept ghost suggestion)
 - **Prefix history:** Up/Down cycle history entries starting with the current buffer prefix (empty buffer = full history)
 - **Ghost autosuggest** (fish-style): dim history suffix after the cursor; accept with Right (at end) or Ctrl+F
@@ -70,16 +70,16 @@ keyboard navigation, history, and ghost autosuggest.
 
 ## Prompt & Visuals
 
-**NEW:** Completely revamped visual experience with 10 additional modern themes inspired by popular color schemes (Nord, Catppuccin, Tokyo Night, Dracula, Gruvbox, Solarized, Cyberpunk, Matrix, Sunset, Aurora, Neon, Retro). The banner now features a sophisticated multi-gradient color transition, and the status line shows both variable and function counts for better context.
+**NEW:** Completely revamped visual experience with 12 additional modern themes inspired by popular color schemes (Nord, Catppuccin, Tokyo Night, Dracula, Gruvbox, Solarized, Cyberpunk, Matrix, Sunset, Aurora, Neon, Retro) — 18 in total. The banner now features a sophisticated multi-gradient color transition, and the status line shows both variable and function counts for better context.
 
 - **Line 1:** full-width `─` gradient rule (hint→accent→hint) with right-side dim status
-  showing `theme · N vars`, printed each cycle
+  showing `theme · N vars · M funcs`, printed each cycle
 - **Active prompt:** `⟨ plusa ⟩ ➤` — U+27E8/27E9 brackets in accent color, `plusa` in hint
   italic, U+27A9 arrow in accent+bold; flashes rose once on error
-- **Result:** `= <value>`, bold number, 10 significant figures, trailing zeros trimmed, integers bare
+- **Result:** `= <value>`, bold number, 12 significant figures, trailing zeros trimmed, integers bare
 - **Error:** caret line under the offending token; next prompt glyph flashes rose once
 - **Banner:** embedded figlet output, rows colored with a top→bottom gradient at runtime
-- **Themes:** 16 built-in truecolor themes (6 hex colors each: prompt/result/error/hint/rule/accent):
+- **Themes:** 18 built-in truecolor themes (6 hex colors each: prompt/result/error/hint/rule/accent):
   - **greenit** (default) — vibrant green on dark background
   - **mono** — clean monochrome grayscale
   - **ocean** — bright blue/cyan palette
@@ -115,6 +115,12 @@ keyboard navigation, history, and ghost autosuggest.
 | `theme` | List available themes with color swatches |
 | `settings` | Interactive settings menu (switch theme) |
 | `ans` | Show last answer |
+| `ms <expr>` | **new** — store an expression into memory |
+| `mr` | **new** — recall memory (feeds `ans` so it chains) |
+| `m+ <expr>` / `m- <expr>` | **new** — add / subtract from memory |
+| `mc` | **new** — clear memory |
+| `deg` / `rad` / `grad` | **new** — angle unit for trig and inverse trig |
+| `mode <dec\|hex\|bin\|sci>` | **new** — output radix (hex/bin apply to integers) |
 | `constants` | List built-in constants (pi, tau, e, phi) |
 | `reset` | Clear user variables and functions |
 | `del <name>` | Delete a variable or function |
@@ -122,8 +128,23 @@ keyboard navigation, history, and ghost autosuggest.
 | `version` / `about` | Show version and build info |
 | `quit` / `exit` / `q` | Exit the REPL |
 
-All commands are case-sensitive. User-defined names (variables, functions) cannot
-shadow built-in constants (`pi`, `tau`, `e`, `phi`, `ans`).
+All commands are case-sensitive. Assigning over a built-in constant (`pi=5`)
+is rejected — built-in definitions win over user assignment.
+
+### v1.2.0 notes
+
+- Memory, angle unit and output radix persist in `~/.config/plusalator/config`
+  and are restored on the next launch.
+- `mode hex` / `mode bin` format integers as `0xff` / `0b101`; non-integers
+  always stay decimal so no precision is lost. `mode sci` switches every result
+  to scientific notation.
+- The status line shows the active angle unit (`· deg`), radix (`· hex`) and
+  memory presence (`· M`) next to the theme name.
+- A no-argument command followed by more text is evaluated as an expression:
+  `ans * 2` multiplies the last answer instead of being swallowed by `ans`.
+- Bare-number display law enforced: results never leak exponent notation for
+  readable magnitudes (`0.000001`, not `1e-06`), integers print in full
+  (`100000000000000000000`, not `1e+20`), and `-0` prints as `0`.
 
 ## Command-line Usage
 

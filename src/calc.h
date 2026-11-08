@@ -4,6 +4,7 @@
 #include <vector>
 #include <memory>
 #include <map>
+#include <set>
 
 struct CalcError {
     std::string msg;
@@ -120,9 +121,16 @@ struct UserFunc {
 class Context {
 public:
     std::map<std::string, double> vars;
+    // Names seeded by the constructor; assignment to them is rejected.
+    const std::set<std::string> builtins;
+    bool isBuiltin(const std::string& name) const;
     std::vector<std::map<std::string, double>> locals;
     std::map<std::string, UserFunc> funcs;
     int callDepth = 0;
+
+    // Angle unit for trig functions and their inverses (deg/rad/grad).
+    enum class Angle { DEG, RAD, GRAD };
+    Angle angle = Angle::RAD;
 
     Context();
     double lookup(const std::string& name) const;

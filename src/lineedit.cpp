@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <poll.h>
 #include <iostream>
 
 enum {
@@ -95,7 +96,10 @@ size_t LineEditor::visibleLen(const std::string& s) {
 void LineEditor::enterRaw() {
     if (!isTty_) return;
     struct termios raw = origTty_;
-    raw.c_lflag &= ~(ECHO | ICANON | IEXTEN);
+    // ISIG off: Ctrl+C must arrive as byte 0x03 so the editor can clear the
+    // buffer (REPL law) instead of the kernel killing the process. An external
+    // `kill -INT` still works — main.cpp installs a handler that resumes the loop.
+    raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
     raw.c_iflag &= ~(ICRNL | INLCR | IGNCR | IXON | IXOFF);
     raw.c_cc[VMIN] = 1;
     raw.c_cc[VTIME] = 0;
@@ -227,6 +231,12 @@ int LineEditor::readKey(std::string& text) {
         if (b == 0x09) return KEY_IGNORE;
         if (b < 0x20) return KEY_IGNORE;
         return (int)(unsigned char)b;
+    }
+    // A lone ESC must not hang the editor: wait at most 120 ms for the rest of
+    // an escape sequence, otherwise treat the ESC as a standalone keystroke.
+    {
+        struct pollfd pfd{STDIN_FILENO, POLLIN, 0};
+        if (poll(&pfd, 1, 120) <= 0) return KEY_IGNORE;
     }
     if (read(STDIN_FILENO, &b, 1) <= 0) return KEY_IGNORE;
     if (b != '[') return KEY_IGNORE;
@@ -423,7 +433,7 @@ bool LineEditor::edit(std::string& out, const std::string& prompt) {
                 case KEY_RIGHT: {
                     if (cur == buf.size() && !buf.empty()) {
                         std::string suf = ghostSuffix(buf);
-                        if (!suf.empty()) { insertStr(buf, cur, suf); break; }
+                        if (!suf.empty()) { insertStr(buf, cur, suf); redraw(prompt, buf, cur); break; }
                     }
                     if (cur < buf.size()) cur++;
                     histIndex_ = -1;

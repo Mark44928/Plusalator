@@ -6,7 +6,7 @@ embedded figlet banner in src/banner.h.
 
 # Commands
 - Build/run/gate: `make` (build plusalator), `make run` (run with TMPDIR), `make check`
-  (`tests/test.sh` ≈88 engine/fuzz assertions + `clang++ -fsyntax-only src/calc.cpp src/main.cpp`),
+  (`tests/test.sh` 114 engine/fuzz+REPL assertions + `clang++ -fsyntax-only src/calc.cpp src/main.cpp`),
   `make clean`, `make install` (honors $PREFIX; Termux $PREFIX auto-set), `make banner`
   (regenerate src/banner.h via figlet).
 - Single expression headlessly: `./plusalator --eval "<expr>"` (bare output, exit 0 even on
@@ -19,8 +19,9 @@ embedded figlet banner in src/banner.h.
 - `^` right-assoc, binds tighter than unary (-2^2=-4, 2^3^2=512).
 - Implicit multiplication inserted by parser (2x, 2(3+4), (2+3)(4+5), 2sin(pi/2),
   x(3), -2x = -(2x)); number-number ban ("2 3" = syntax error with caret).
-- User functions: cloned AST per call (Expr::clone), callDepth cap 64, graceful
-  "recursion too deep", never a stack crash.
+- User functions: the body AST is cloned once at definition (`b->right()->clone()`
+  in `evalStmt`, `src/calc.cpp:452`) and shared by every call; callDepth cap 64,
+  graceful "recursion too deep", never a stack crash.
 - NEVER crash/hang — fuzz-gate (`tests/test.sh` fuzz loop) before any milestone claim.
 - `--eval` output = machine-readable bare lines only (number or caret+error).
 
@@ -34,6 +35,13 @@ embedded figlet banner in src/banner.h.
   `ans` (last answer) `constants` (built-ins) `reset` (clear user vars/funcs) `del <name>`
   (remove var/func) `config` (config path + active theme) `version` / `about`
   `quit`/`exit`/`q`.
+- v1.2.0 commands: `ms <expr>` / `mr` / `m+` / `m-` / `mc` (memory slots — `mr` feeds
+  `ans`), `deg` / `rad` / `grad` (angle unit for trig + inverse trig), `mode
+  <dec|hex|bin|sci>` (output radix; hex/bin only for integral values). All three
+  persist via `saveSettings()` (theme+angle+mode in one KEY=VALUE config) and are
+  restored on launch.
+- No-argument commands (ans, vars, theme, ...) with trailing text evaluate as
+  expressions — `ans * 2` must not be swallowed by the `ans` command.
 
 # Visual laws
 - NO hand-drawn ASCII art — banner is embedded figlet output (src/banner.h), runtime
@@ -41,9 +49,12 @@ embedded figlet banner in src/banner.h.
 - NO_COLOR / TERM=dumb strip all formatting (isatty required for color).
 - Prompt ornament glyphs are standard BMP (U+27E8/27E9 ⟨⟩, U+27A9 ➤, U+00B7 ·),
   never nerd-font PUA codepoints.
-- Right-side dim status on line 1: theme · N vars; themes: greenit (default), mono,
-  ocean, ember, sakura; `settings` switches theme and persists it to
-  `$HOME/.config/plusalator/config` across sessions.
+- Right-side dim status on line 1: theme · N vars · M funcs (+ `· deg|hex|M`
+  when non-default); 18 themes: greenit (default), mono, ocean, ember, sakura,
+  midnight, nord, catppuccin, tokyonight, dracula, gruvbox, solarized, cyberpunk,
+  matrix, sunset, aurora, neon, retro; `settings` switches theme and persists
+  theme + angle unit + output radix to `$HOME/.config/plusalator/config`. ESC alone
+  is ignored by the editor (Ctrl+C clears the buffer, Ctrl+D exits).
 
 # Examples
 - ✅ Correct: changing a builtin's behavior → edit src/calc.cpp → add/update assertion in
