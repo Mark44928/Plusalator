@@ -259,12 +259,16 @@ std::unique_ptr<Expr> Parser::parsePrimary() {
 
 // ---------- context ----------
 
-Context::Context() {
+Context::Context() : builtins{"pi", "tau", "e", "phi", "ans"} {
     vars["pi"] = 3.14159265358979323846;
     vars["tau"] = 6.28318530717958647692;
     vars["e"] = 2.71828182845904523536;
     vars["phi"] = 1.61803398874989484820;
     vars["ans"] = 0.0;
+}
+
+bool Context::isBuiltin(const std::string& name) const {
+    return builtins.count(name) != 0;
 }
 
 double Context::lookup(const std::string& name) const {
@@ -301,18 +305,34 @@ static const std::map<std::string, int> builtinArgCount = {
     {"pow",2},{"mod",2},{"hypot",2}
 };
 
-static double callBuiltin(Context&, const std::string& name, const std::vector<double>& a) {
+static double callBuiltin(Context& ctx, const std::string& name, const std::vector<double>& a) {
     int need = builtinArgCount.at(name);
     if ((int)a.size() != need) throw CalcError("function " + name + " expects " + std::to_string(need) + " argument(s)", 0);
     double a0 = a.size() > 0 ? a[0] : 0;
     double a1 = a.size() > 1 ? a[1] : 0;
+    // Angle unit conversion: argument -> radians
+    auto toRad = [&ctx](double x) {
+        switch (ctx.angle) {
+            case Context::Angle::DEG: return x * 3.14159265358979323846 / 180.0;
+            case Context::Angle::GRAD: return x * 3.14159265358979323846 / 200.0;
+            default: return x;
+        }
+    };
+    // radians -> current angle unit (for inverse trig)
+    auto fromRad = [&ctx](double x) {
+        switch (ctx.angle) {
+            case Context::Angle::DEG: return x * 180.0 / 3.14159265358979323846;
+            case Context::Angle::GRAD: return x * 200.0 / 3.14159265358979323846;
+            default: return x;
+        }
+    };
     if (name == "sqrt") { if (a0 < 0) throw CalcError("sqrt of negative number", 0); return std::sqrt(a0); }
-    if (name == "sin") return std::sin(a0);
-    if (name == "cos") return std::cos(a0);
-    if (name == "tan") return std::tan(a0);
-    if (name == "asin") { if (a0 < -1 || a0 > 1) throw CalcError("asin out of range", 0); return std::asin(a0); }
-    if (name == "acos") { if (a0 < -1 || a0 > 1) throw CalcError("acos out of range", 0); return std::acos(a0); }
-    if (name == "atan") return std::atan(a0);
+    if (name == "sin") return std::sin(toRad(a0));
+    if (name == "cos") return std::cos(toRad(a0));
+    if (name == "tan") return std::tan(toRad(a0));
+    if (name == "asin") { if (a0 < -1 || a0 > 1) throw CalcError("asin out of range", 0); return fromRad(std::asin(a0)); }
+    if (name == "acos") { if (a0 < -1 || a0 > 1) throw CalcError("acos out of range", 0); return fromRad(std::acos(a0)); }
+    if (name == "atan") return fromRad(std::atan(a0));
     if (name == "log") { if (a0 <= 0) throw CalcError("log of non-positive number", 0); return std::log10(a0); }
     if (name == "ln") { if (a0 <= 0) throw CalcError("ln of non-positive number", 0); return std::log(a0); }
     if (name == "exp") return std::exp(a0);
@@ -392,7 +412,9 @@ double Call::eval(Context& ctx) const {
         return r;
     }
 
-    // user function: parameter frame, depth cap 64
+    // user function: parameter frame, depth cap 64. The guard restores the
+    // frame and depth even when the body throws (e.g. sqrt of a negative) —
+    // otherwise every failed call permanently leaks a stack frame.
     auto ff = ctx.funcs.find(name_);
     if (ff != ctx.funcs.end()) {
         const UserFunc& uf = ff->second;
@@ -401,11 +423,12 @@ double Call::eval(Context& ctx) const {
         if (ctx.callDepth >= 64) throw CalcError("recursion too deep", 0);
         ctx.callDepth++;
         ctx.pushFrame();
+        struct FrameGuard {
+            Context& c;
+            ~FrameGuard() { c.popFrame(); c.callDepth--; }
+        } guard{ctx};
         for (size_t i = 0; i < uf.params.size(); i++) ctx.setVar(uf.params[i], argVals[i]);
-        double result = uf.body->eval(ctx);
-        ctx.popFrame();
-        ctx.callDepth--;
-        return result;
+        return uf.body->eval(ctx);
     }
 
     throw CalcError("unknown function: " + name_, 0);
@@ -418,6 +441,8 @@ double evalStmt(const std::string& input, Context& ctx) {
     const BinOp* b = dynamic_cast<const BinOp*>(expr.get());
     if (b && b->op() == '=') {
         if (auto* v = dynamic_cast<Var*>(b->left())) {
+            if (ctx.isBuiltin(v->name()))
+                throw CalcError("cannot assign to built-in constant: " + v->name(), 0);
             double val = b->right()->eval(ctx);
             ctx.setVar(v->name(), val);
             ctx.vars["ans"] = val;
@@ -461,9 +486,50 @@ double evalLine(const std::string& input, Context& ctx) {
 
 // ---------- formatting ----------
 
+// %g switches to exponent form once it thinks a number is "extreme". The
+// display law wants bare decimals wherever a plain reading is sane, and the
+// --eval contract wants machine-readable bare numbers, so expand the mantissa
+// back into positional notation. Returns the input unchanged when expansion
+// would be longer than the exponent form (or absurdly wide).
+static std::string expandExponent(std::string s) {
+    auto epos = s.find('e');
+    if (epos == std::string::npos) epos = s.find('E');
+    if (epos == std::string::npos) return s;
+
+    int exp = 0;
+    try { exp = std::stoi(s.substr(epos + 1)); } catch (...) { return s; }
+    std::string mant = s.substr(0, epos);
+    bool neg = !mant.empty() && mant[0] == '-';
+    if (neg) mant.erase(0, 1);
+
+    auto dot = mant.find('.');
+    std::string digits = (dot == std::string::npos) ? mant : mant.substr(0, dot) + mant.substr(dot + 1);
+    int point = (dot == std::string::npos ? static_cast<int>(mant.size()) : static_cast<int>(dot)) + exp;
+
+    std::string out;
+    if (point <= 0) {
+        out = "0." + std::string(static_cast<size_t>(-point), '0') + digits;
+    } else if (point >= static_cast<int>(digits.size())) {
+        out = digits + std::string(static_cast<size_t>(point) - digits.size(), '0');
+    } else {
+        out = digits.substr(0, static_cast<size_t>(point)) + "." + digits.substr(static_cast<size_t>(point));
+    }
+    if (out.find('.') != std::string::npos) {
+        while (!out.empty() && out.back() == '0') out.pop_back();
+        if (!out.empty() && out.back() == '.') out.pop_back();
+    }
+    if (out.empty() || out == "0") return "0";
+    // Keep the exponent form when the expansion would be unwieldy.
+    if (out.size() + (neg ? 1 : 0) > 24) return s;
+    return (neg ? "-" : "") + out;
+}
+
 std::string formatNumber(double v) {
     if (std::isnan(v) || std::isinf(v)) return std::isnan(v) ? "nan" : (v < 0 ? "-inf" : "inf");
-    if (v == std::floor(v) && std::abs(v) < 1e15) {
+    if (v == 0) return "0"; // never "-0"
+    // Integers print in full up to the exact long long range; %.12g silently
+    // rounds anything past 12 significant digits into exponent form.
+    if (v == std::floor(v) && std::abs(v) < 9.2e18) {
         char buf[64];
         std::snprintf(buf, sizeof buf, "%.0f", v);
         return buf;
@@ -476,6 +542,8 @@ std::string formatNumber(double v) {
         size_t end = s.find_last_not_of('0');
         if (end != std::string::npos && s[end] == '.') end--;
         if (end != std::string::npos) s = s.substr(0, end + 1);
+    } else {
+        s = expandExponent(s);
     }
     return s;
 }

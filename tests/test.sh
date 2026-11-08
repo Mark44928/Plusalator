@@ -3,7 +3,7 @@
 # Exit code: 0 if all pass, non-zero otherwise.
 set -euo pipefail
 
-TMPDIR=${TMPDIR:-/tmp}
+TMPDIR=${TMPDIR:-/data/data/com.termux/files/usr/tmp}
 export TMPDIR
 mkdir -p "$TMPDIR"
 
@@ -89,13 +89,81 @@ for i in $(seq 1 50); do
   for j in $(seq 1 $n); do
     soup="${soup}${RANDOM_CHARS:$((RANDOM % ${#RANDOM_CHARS})):1}"
   done
-  if timeout 1 "$BIN" --eval "$soup" >/dev/null 2>&1; then
-    rc=$?
-    if [ "$rc" != "0" ]; then fail "fuzz '$soup' -> exit $rc"; else PASS=$((PASS + 1)); fi
-  else
-    fail "fuzz '$soup' -> did not terminate or crashed"
-  fi
+  rc=0
+  timeout 1 "$BIN" --eval "$soup" >/dev/null 2>&1 || rc=$?
+  # 0 = evaluated, 1 = graceful error (exit 0 per the --eval contract);
+  # anything else — including timeout's 124 — is a crash or a hang.
+  if [ "$rc" != "0" ] && [ "$rc" != "1" ]; then fail "fuzz '$soup' -> exit $rc"; else PASS=$((PASS + 1)); fi
 done
+
+echo "== regression: a failed user-function call must not leak its stack frame =="
+# Before the fix, a throw inside a user-function body permanently popped a
+# frame off `locals`: later assignments vanished from vars and reset could
+# not clear them.
+repl_out=$(printf 'f(x)=sqrt(x-5)\nf(1)\nzz=5\nvars\nquit\n' | timeout 5 "$BIN" 2>&1 | sed 's/\x1b\[[0-9;]*[A-Za-z]//g')
+if ! printf '%s\n' "$repl_out" | grep -q 'sqrt of negative number'; then
+  fail "frame-leak: f(1) did not report the expected error"
+elif printf '%s\n' "$repl_out" | grep -q '^zz = 5$'; then
+  PASS=$((PASS + 1))
+else
+  fail "frame-leak: assignment after a failed call disappeared from vars"
+fi
+
+echo "== FORCE_COLOR opt-in for --eval =="
+if FORCE_COLOR=1 "$BIN" --eval "1+1" 2>&1 | grep -q $'\033\[38;2;'; then PASS=$((PASS + 1)); else fail "FORCE_COLOR=1 did not colorize --eval output"; fi
+if NO_COLOR=1 FORCE_COLOR=1 "$BIN" --eval "1+1" 2>&1 | grep -q $'\033\['; then fail "NO_COLOR lost to FORCE_COLOR"; else PASS=$((PASS + 1)); fi
+
+echo "== v1.2.0: memory slots =="
+# assert_repl <label> <input> <home-suffix> <expected-last-result>
+assert_repl() {
+  local got
+  got=$(printf '%b' "$2" | HOME="$TMPDIR/plusa-$3" timeout 10 "$BIN" 2>&1 \
+        | sed 's/\x1b\[[0-9;]*[A-Za-z]//g' | sed -n 's/^= //p' | tail -1)
+  if [ "$got" = "$4" ]; then PASS=$((PASS + 1));
+  else fail "$1 -> got '$got' expected '$4'"; fi
+}
+assert_repl "mr feeds ans"         'ms 42\nmr\nans * 2\nquit\n'   mem-b   "84"
+mem_grep() { # <label> <input> <home-suffix> <needle>
+  local out
+  out=$(printf '%b' "$2" | HOME="$TMPDIR/plusa-$3" timeout 10 "$BIN" 2>&1 | sed 's/\x1b\[[0-9;]*[A-Za-z]//g')
+  if printf '%s\n' "$out" | grep -qF "$4"; then PASS=$((PASS + 1));
+  else fail "$1 -> missing '$4'"; fi
+}
+mem_grep  "ms stores"              'ms 42\nquit\n'               mem-a   "memory = 42"
+mem_grep  "m+ adds"                'ms 42\nm+ 8\nquit\n'         mem-c   "memory = 50"
+mem_grep  "m- subtracts"           'ms 42\nm- 10\nquit\n'        mem-d   "memory = 32"
+repl_out=$(printf 'ms 42\nmc\nmr\nquit\n' | HOME="$TMPDIR/plusa-mem-e" timeout 10 "$BIN" 2>&1 | sed 's/\x1b\[[0-9;]*[A-Za-z]//g')
+if printf '%s\n' "$repl_out" | grep -qF "memory is empty"; then PASS=$((PASS + 1));
+else fail "mc/mr did not clear memory"; fi
+
+echo "== v1.2.0: angle units =="
+assert_repl "deg sin(30)"          'deg\nsin(30)\nquit\n'         angle-a "0.5"
+assert_repl "grad sin(100)"        'grad\nsin(100)\nquit\n'       angle-b "1"
+assert_repl "rad sin(pi/2)"        'rad\nsin(pi/2)\nquit\n'       angle-c "1"
+assert_repl "deg asin(1)"          'deg\nasin(1)\nquit\n'         angle-d "90"
+
+echo "== v1.2.0: output radix =="
+assert_repl "mode hex"             'mode hex\n255\nquit\n'        radix-a "0xff"
+assert_repl "mode bin"             'mode bin\n5\nquit\n'          radix-b "0b101"
+assert_repl "mode sci"             'mode sci\n1234\nquit\n'       radix-c "1.234000e+03"
+assert_repl "hex keeps decimals"   'mode hex\n1.5\nquit\n'        radix-d "1.5"
+assert_repl "mode rejects junk"    'mode nope\n1\nquit\n'         radix-e "1"
+
+echo "== v1.2.0: no-arg commands never swallow expressions =="
+assert_repl "ans * 2 evaluates"    'ms 42\nmr\nans * 2\nquit\n'   swallow-a "84"
+repl_out=$(printf 'vars + 1\nquit\n' | HOME="$TMPDIR/plusa-swallow-b" timeout 10 "$BIN" 2>&1 | sed 's/\x1b\[[0-9;]*[A-Za-z]//g')
+if printf '%s\n' "$repl_out" | grep -qF "unknown variable: vars"; then PASS=$((PASS + 1));
+else fail "vars + 1 was swallowed by the vars command instead of evaluating"; fi
+
+
+echo "== regression: bare-number display law (no exponent leaks) =="
+assert_eq "0.000001"            "0.000001"
+assert_eq "100000000000000000000" "100000000000000000000"
+assert_eq "1e-06"               "0.000001"
+assert_eq "1.5e18"              "1500000000000000000"
+assert_eq "-0"                  "0"
+assert_eq "0.0000001"           "0.0000001"
+assert_eq "1e-300"              "1e-300"     # too wide to expand: exponent stays
 
 echo
 echo "RESULT: $PASS passed, $FAIL failed"
