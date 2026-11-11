@@ -157,14 +157,64 @@ static bool g_has_memory = false;
 static double g_memory = 0.0;
 
 // Persist all session settings (theme, angle, radix) so a restart continues
+// Persist user-defined variables to ~/.config/plusalator/vars. KEY=VALUE per
+// line. Loaded on startup; saved on exit. Builtins (pi, ans, …) are skipped
+// so they never shadow fresh constants.
+static std::string varsPath() {
+    const char* home = getenv("HOME");
+    std::string base = home ? home : std::string(".");
+    return base + "/.config/plusalator/vars";
+}
+
+static void saveUserVars(const Context& ctx) {
+    const char* home = getenv("HOME");
+    if (!home || !*home) return;
+    // mkdir -p semantics: ensure each parent exists before creating the leaf
+    std::string dir = std::string(home) + "/.config";
+    mkdir(dir.c_str(), 0700);
+    dir += "/plusalator";
+    mkdir(dir.c_str(), 0700);
+    std::ofstream f(varsPath(), std::ios::trunc);
+    if (!f) return;
+    for (auto& kv : ctx.vars) {
+        if (ctx.isBuiltin(kv.first)) continue;
+        f << kv.first << "=" << formatNumber(kv.second) << "\n";
+    }
+}
+
+static void loadUserVars(Context& ctx) {
+    std::ifstream f(varsPath());
+    if (!f) return;
+    std::string line;
+    while (std::getline(f, line)) {
+        auto eq = line.find('=');
+        if (eq == std::string::npos) continue;
+        std::string key = line.substr(0, eq);
+        std::string val = line.substr(eq + 1);
+        size_t ks = key.find_first_not_of(" \t\r\n");
+        size_t ke = key.find_last_not_of(" \t\r\n");
+        if (ks == std::string::npos || ke == std::string::npos) continue;
+        key = key.substr(ks, ke - ks + 1);
+        if (key.empty()) continue;
+        if (ctx.isBuiltin(key)) continue;
+        try { ctx.vars[key] = std::stod(val); } catch (...) {}
+    }
+}
+
 // where you left off. Unknown keys are ignored on load; the file stays the
 // same simple KEY=VALUE format.
 static bool saveSettings(const std::string& themeName, const std::string& angle, const std::string& radixName) {
     std::string path = configPath();
+    // ensure every component (.config, plusalator dir) exists — same mkdir -p semantics
+    for (size_t i = 1; i < path.size(); i++) {
+        if (path[i] == '/') {
+            mkdir(path.substr(0, i).c_str(), 0700);
+        }
+    }
     size_t slash = path.find_last_of('/');
     if (slash != std::string::npos) {
         std::string dir = path.substr(0, slash);
-        if (mkdir(dir.c_str(), 0700) != 0 && errno != EEXIST) return false;
+        mkdir(dir.c_str(), 0700);
     }
     std::ofstream f(path, std::ios::trunc);
     if (!f) return false;
@@ -333,6 +383,7 @@ int main(int argc, char** argv) {
     }
 
     Context ctx;
+    loadUserVars(ctx);   // user vars from last session
 
     // Restore angle unit + output radix.
     std::string angleName = "rad";
@@ -774,6 +825,7 @@ int main(int argc, char** argv) {
             std::cout << "\n";
         }
     }
+    saveUserVars(ctx);   // persist user-defined variables to ~/.config/plusalator/vars
     std::cout << "\n";
     return 0;
 }
