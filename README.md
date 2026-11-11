@@ -44,9 +44,11 @@ make install    # PREFIX-aware: $PREFIX on Termux, /usr/local on Linux by defaul
 - Implicit multiplication: `2x`, `2(3+4)`, `(2+3)(4+5)`, `2sin(pi/2)`, `3pi`, `x(3)`, `-2x`.
   Never between two numbers (`"2 3"` is a syntax error with a caret).
 - Number literals: `0x` hex, `0b` binary, `0o` octal.
-- Built-ins (radians by default; `deg`/`rad`/`grad` switch the unit for trig and inverse trig): `sqrt`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `log` (base 10),
-  `ln`, `exp`, `abs`, `floor`, `ceil`, `round`, `min(...)`, `max(...)`, `hypot(...)`,
-  `pow(b,e)`, `mod(x,y)`.
+- Built-ins (radians by default; `deg`/`rad`/`grad` switch the unit for trig and inverse trig): `sqrt`, `sin`, `cos`, `tan`, `cot`, `csc`, `sec`, `asin`, `acos`, `atan`,
+  `log`, `log2`, `ln`, `exp`, `abs`, `floor`, `ceil`, `round`, `sign`,
+  `min`, `max`, `clamp(x, lo, hi)`, `gcd`, `lcm`, `pow(b,e)`, `mod(x,y)`, `hypot(a,b)`,
+  `ncr(n,r)` (combinations), `npr(n,r)` (permutations),
+  `fact(n)` (factorial as a function form of `!`).
 - Constants: `pi`, `tau`, `e`, `phi`. `ans` = last result.
 - Assignment `x=5`; user functions `f(x)=x^2+1` (body cloned once at definition, depth cap 64,
   graceful "recursion too deep", never a stack crash).
