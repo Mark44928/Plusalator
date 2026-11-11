@@ -321,9 +321,18 @@ static const std::map<std::string, int> builtinArgCount = {
     {"sqrt",1},{"sin",1},{"cos",1},{"tan",1},{"asin",1},{"acos",1},{"atan",1},
     {"cot",1},{"csc",1},{"sec",1},
     {"log",1},{"ln",1},{"log2",1},{"exp",1},{"abs",1},{"floor",1},{"ceil",1},{"round",1},
-    {"pow",2},{"mod",2},{"hypot",2},{"gcd",2},{"lcm",2},
+    {"pow",2},{"mod",2},{"hypot",2},{"gcd",2},{"lcm",2},{"cbrt",1},{"asinh",1},{"acosh",1},{"atanh",1},{"isprime",1},{"nextprime",1},{"prevprime",1},
     {"clamp",3},{"sign",1},{"ncr",2},{"npr",2},{"fact",1}
 };
+
+// trial-division primality test: shared by isprime/nextprime/prevprime/factor
+static bool isprime_helper(long long n) {
+    if (n < 2) return false;
+    if (n == 2) return true;
+    if ((n & 1) == 0) return false;
+    for (long long d = 3; d <= n / d; d += 2) if (n % d == 0) return false;
+    return true;
+}
 
 static double callBuiltin(Context& ctx, const std::string& name, const std::vector<double>& a) {
     int need = builtinArgCount.at(name);
@@ -379,6 +388,13 @@ static double callBuiltin(Context& ctx, const std::string& name, const std::vect
     if (name == "ncr") { if (a0 < 0 || a1 < 0 || a0 < a1 || a0 != std::floor(a0) || a1 != std::floor(a1)) throw CalcError("ncr: n and r must be non-negative integers, n >= r", 0); double out = 1; for (int i = 0; i < (int)a1; i++) { out *= (a0 - i); out /= (i + 1); } return out; }
     if (name == "npr") { if (a0 < 0 || a1 < 0 || a0 < a1 || a0 != std::floor(a0) || a1 != std::floor(a1)) throw CalcError("npr: n and r must be non-negative integers, n >= r", 0); double out = 1; for (int i = 0; i < (int)a1; i++) out *= (a0 - i); return out; }
     if (name == "fact") { if (a0 < 0 || a0 != std::floor(a0) || a0 > 170) throw CalcError("fact: n must be a non-negative integer <= 170", 0); return factorial(a0); }
+    if (name == "cbrt") return std::cbrt(a0);
+    if (name == "asinh") return std::asinh(a0);
+    if (name == "acosh") { if (a0 < 1) throw CalcError("acosh of value less than 1", 0); return std::acosh(a0); }
+    if (name == "atanh") { if (a0 < -1 || a0 >= 1) throw CalcError("atanh out of (-1, 1)", 0); return std::atanh(a0); }
+    if (name == "isprime") { long long n = (long long)std::floor(std::abs(a0)); if (n < 2) return 0.0; if (n == 2) return 1.0; if ((n & 1) == 0) return 0.0; for (long long d = 3; d * d <= n; d += 2) { if (d * d > n) break; if (n % d == 0) return 0.0; } return 1.0; }
+    if (name == "nextprime") { long long n = (long long)std::floor(std::abs(a0)) + 1; if (n < 2) return 2.0; if ((n & 1) == 0) n++; while (!isprime_helper(n)) { n += 2; if (n > 1000000000) throw CalcError("nextprime out of range", 0); } return (double)n; }
+    if (name == "prevprime") { long long n = (long long)std::floor(std::abs(a0)) - 1; if (n < 2) return 2.0; if ((n & 1) == 0) n--; while (!isprime_helper(n)) { n -= 2; if (n < 2) return 2.0; } return (double)n; }
     throw CalcError("unknown function: " + name, 0);
 }
 

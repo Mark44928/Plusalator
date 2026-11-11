@@ -44,8 +44,9 @@ make install    # PREFIX-aware: $PREFIX on Termux, /usr/local on Linux by defaul
 - Implicit multiplication: `2x`, `2(3+4)`, `(2+3)(4+5)`, `2sin(pi/2)`, `3pi`, `x(3)`, `-2x`.
   Never between two numbers (`"2 3"` is a syntax error with a caret).
 - Number literals: `0x` hex, `0b` binary, `0o` octal.
-- Built-ins (radians by default; `deg`/`rad`/`grad` switch the unit for trig and inverse trig): `sqrt`, `sin`, `cos`, `tan`, `cot`, `csc`, `sec`, `asin`, `acos`, `atan`,
-  `log`, `log2`, `ln`, `exp`, `abs`, `floor`, `ceil`, `round`, `sign`,
+- Built-ins (radians by default; `deg`/`rad`/`grad` switch the unit for trig and inverse trig): `sqrt`, `cbrt`, `sin`, `cos`, `tan`, `cot`, `csc`, `sec`, `asin`, `acos`, `atan`,
+  `asinh`, `acosh`, `atanh`, `log`, `log2`, `ln`, `exp`, `abs`, `floor`, `ceil`, `round`, `sign`,
+  `isprime(x)` (1 if prime), `nextprime(n)`, `prevprime(n)` (the primes strictly after/before n),
   `min`, `max`, `clamp(x, lo, hi)`, `gcd`, `lcm`, `pow(b,e)`, `mod(x,y)`, `hypot(a,b)`,
   `ncr(n,r)` (combinations), `npr(n,r)` (permutations),
   `fact(n)` (factorial as a function form of `!`).
