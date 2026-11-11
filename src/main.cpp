@@ -176,6 +176,7 @@ static void saveUserVars(const Context& ctx) {
     mkdir(dir.c_str(), 0700);
     std::ofstream f(varsPath(), std::ios::trunc);
     if (!f) return;
+    if (g_has_memory) f << "MEMORY=" << formatNumber(g_memory) << "\n";
     for (auto& kv : ctx.vars) {
         if (ctx.isBuiltin(kv.first)) continue;
         f << kv.first << "=" << formatNumber(kv.second) << "\n";
@@ -196,6 +197,10 @@ static void loadUserVars(Context& ctx) {
         if (ks == std::string::npos || ke == std::string::npos) continue;
         key = key.substr(ks, ke - ks + 1);
         if (key.empty()) continue;
+        if (key == "MEMORY" || key == "memory") {
+            try { g_memory = std::stod(val); g_has_memory = true; } catch (...) {}
+            continue;
+        }
         if (ctx.isBuiltin(key)) continue;
         try { ctx.vars[key] = std::stod(val); } catch (...) {}
     }
@@ -599,15 +604,22 @@ int main(int argc, char** argv) {
             }
             std::cout << esc( cur->vr, cur->vg, cur->vb) << "└" << rep(W - 2, "─") << "┘" << escReset() << "\n";
         } else if (cmd == "vars") {
-            for (auto& kv : ctx.vars) {
+            std::set<std::pair<std::string,std::string>> rows;
+            for (auto& kv : ctx.vars) rows.insert({kv.first, formatNumber(kv.second)});
+            for (auto& kv : rows) {
                 std::cout << esc( cur->pr, cur->pg, cur->pb) << kv.first << escReset()
-                          << " = " << esc( cur->rr, cur->rg, cur->rb) << formatNumber(kv.second) << escReset() << "\n";
+                          << " = " << esc( cur->rr, cur->rg, cur->rb) << kv.second << escReset() << "\n";
             }
         } else if (cmd == "funcs") {
             if (ctx.funcs.empty()) {
                 std::cout << escDim() << "(no user functions)" << escReset() << "\n";
             }
-            for (auto& kv : ctx.funcs) {
+            std::vector<std::reference_wrapper<const std::pair<const std::string, UserFunc>>> funcs;
+            funcs.reserve(ctx.funcs.size());
+            for (auto& kv : ctx.funcs) funcs.emplace_back(kv);
+            std::sort(funcs.begin(), funcs.end(), [](auto& a, auto& b){ return a.get().first < b.get().first; });
+            for (auto& fk : funcs) {
+                auto& kv = fk.get();
                 std::cout << esc( cur->pr, cur->pg, cur->pb) << kv.first << escReset() << "(";
                 for (size_t j = 0; j < kv.second.params.size(); j++) {
                     if (j) std::cout << ", ";
