@@ -59,6 +59,13 @@ On startup, a dim tip reminds you to type `help` for commands. Type any expressi
 calculate immediately. The REPL supports raw-mode line editing on TTYs with full
 keyboard navigation, history, and ghost autosuggest.
 
+## Quick commands (no math)
+
+```bash
+primes [n]           # print every prime <= n (default 100, capped at 1000)
+factorize 360        # or `factors` — prints 360 = 2 × 2 × 2 × 3 × 3 × 5
+```
+
 ## REPL
 
 - **Raw-mode line editor** on TTYs with full keyboard support; `getline` fallback when stdin is not a TTY
