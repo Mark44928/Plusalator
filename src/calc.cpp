@@ -301,8 +301,10 @@ static double factorial(double v) {
 
 static const std::map<std::string, int> builtinArgCount = {
     {"sqrt",1},{"sin",1},{"cos",1},{"tan",1},{"asin",1},{"acos",1},{"atan",1},
-    {"log",1},{"ln",1},{"exp",1},{"abs",1},{"floor",1},{"ceil",1},{"round",1},
-    {"pow",2},{"mod",2},{"hypot",2}
+    {"cot",1},{"csc",1},{"sec",1},
+    {"log",1},{"ln",1},{"log2",1},{"exp",1},{"abs",1},{"floor",1},{"ceil",1},{"round",1},
+    {"pow",2},{"mod",2},{"hypot",2},{"gcd",2},{"lcm",2},
+    {"clamp",3},{"sign",1},{"ncr",2},{"npr",2},{"fact",1}
 };
 
 static double callBuiltin(Context& ctx, const std::string& name, const std::vector<double>& a) {
@@ -310,6 +312,7 @@ static double callBuiltin(Context& ctx, const std::string& name, const std::vect
     if ((int)a.size() != need) throw CalcError("function " + name + " expects " + std::to_string(need) + " argument(s)", 0);
     double a0 = a.size() > 0 ? a[0] : 0;
     double a1 = a.size() > 1 ? a[1] : 0;
+    double a2 = a.size() > 2 ? a[2] : 0;
     // Angle unit conversion: argument -> radians
     auto toRad = [&ctx](double x) {
         switch (ctx.angle) {
@@ -346,6 +349,18 @@ static double callBuiltin(Context& ctx, const std::string& name, const std::vect
         return a0 - a1 * std::floor(a0 / a1);
     }
     if (name == "hypot") return std::hypot(a0, a1);
+    if (name == "log2") { if (a0 <= 0) throw CalcError("log2 of non-positive number", 0); return std::log2(a0); }
+    if (name == "cot") { double t = std::tan(toRad(a0)); if (t == 0.0) throw CalcError("cot of a zero tangent point", 0); return 1.0 / t; }
+    if (name == "csc") { double t = std::sin(toRad(a0)); if (t == 0.0) throw CalcError("csc of a zero sine point", 0); return 1.0 / t; }
+    if (name == "sec") { double t = std::cos(toRad(a0)); if (t == 0.0) throw CalcError("sec of a zero cos point", 0); return 1.0 / t; }
+    if (name == "gcd") { double x = std::abs(a0), y = std::abs(a1); while (y > 0.5) { double t = std::fmod(x, y); x = y; y = t; } return x; }
+    if (name == "lcm") { double g = 1; { double x = std::abs(a0), y = std::abs(a1); while (y > 0.5) { double t = std::fmod(x, y); x = y; y = t; } g = x; } return (g == 0.0) ? 0.0 : std::abs(a0 * a1) / g; }
+    // min/max are variadic — handled in Call::eval above
+    if (name == "clamp") { return (a0 < a1) ? a1 : (a0 > a2 ? a2 : a0); }
+    if (name == "sign") return (a0 > 0) - (a0 < 0) + 0.0;
+    if (name == "ncr") { if (a0 < 0 || a1 < 0 || a0 < a1 || a0 != std::floor(a0) || a1 != std::floor(a1)) throw CalcError("ncr: n and r must be non-negative integers, n >= r", 0); double out = 1; for (int i = 0; i < (int)a1; i++) { out *= (a0 - i); out /= (i + 1); } return out; }
+    if (name == "npr") { if (a0 < 0 || a1 < 0 || a0 < a1 || a0 != std::floor(a0) || a1 != std::floor(a1)) throw CalcError("npr: n and r must be non-negative integers, n >= r", 0); double out = 1; for (int i = 0; i < (int)a1; i++) out *= (a0 - i); return out; }
+    if (name == "fact") { if (a0 < 0 || a0 != std::floor(a0) || a0 > 170) throw CalcError("fact: n must be a non-negative integer <= 170", 0); return factorial(a0); }
     throw CalcError("unknown function: " + name, 0);
 }
 
