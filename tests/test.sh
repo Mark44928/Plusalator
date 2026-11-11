@@ -197,6 +197,16 @@ assert_approx "asinh(0)"      "0"
 assert_approx "acosh(1)"      "0"
 assert_approx "atanh(0)"      "0"
 
+echo "== persistent user vars survive restart =="
+mkdir -p "$TMPDIR/plusa-persist"
+HOME="$TMPDIR/plusa-persist" timeout 10 bash -c 'printf "x=42\ny=2*x+1\nquit\n" | "'"$BIN"'"' >/dev/null 2>&1
+persisted=$(HOME="$TMPDIR/plusa-persist" timeout 10 bash -c 'printf "x\ny\nquit\n" | "'"$BIN"'"' 2>&1 | sed 's/\x1b\[[0-9;?]*[a-zA-Z]//g' | grep -E "= ")
+if printf '%s\n' "$persisted" | awk '/42/{found42=1; next} /85/{if(found42) passed=1} END{exit !passed}'; then
+  PASS=$((PASS + 1))
+else
+  fail "persist user vars -> got: $persisted"
+fi
+
 echo "== v1.3.0: physical constants are baked in =="
 assert_approx "G"             "6.6743e-11"
 assert_eq "c"                 "299792458"
