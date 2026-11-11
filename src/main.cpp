@@ -567,7 +567,8 @@ int main(int argc, char** argv) {
                 {"clear", "clear screen and re-banner"},
                 {"theme", "list available themes"},
                 {"settings", "interactive settings menu (switch theme)"},
-                {"ans", "show last answer"},
+                {"primes [n]", "list primes up to n (max 1000)"},
+                {"factorize / factors", "prime factorization of n"},
                 {"isprime", "1 if n is prime, else 0"},
                 {"nextprime/prevprime", "next/previous prime strictly after/before n"},
                 {"cbrt", "cube root of x"},
@@ -707,6 +708,46 @@ int main(int argc, char** argv) {
                     std::cout << esc( cur->pr, cur->pg, cur->pb) << "  " << c.first << escReset()
                               << " = " << esc( cur->rr, cur->rg, cur->rb)
                               << formatNumber(c.second) << escReset() << "\n";
+                }
+            }
+        } else if (cmd == "primes" || cmd == "factorize" || cmd == "factors") {
+            long long n = 0;
+            try { n = arg.empty() ? 100 : std::stoll(arg); }
+            catch (...) { std::cout << esc( cur->er, cur->eg, cur->eb) << "invalid integer: " << arg << escReset() << "\n"; continue; }
+            if (n < 2) {
+                std::cout << esc( cur->er, cur->eg, cur->eb) << "needs an integer >= 2" << escReset() << "\n";
+            } else if (cmd == "primes") {
+                // list all primes up to n; cap display to avoid a 10k wall of text
+                long long capped = std::min<long long>(n, 1000);
+                std::vector<long long> pr;
+                for (long long k = 2; k <= capped; k++) {
+                    bool p = true;
+                    for (long long d = 2; d * d <= k; d++) {
+                        if (k % d == 0) { p = false; break; }
+                    }
+                    if (p) pr.push_back(k);
+                }
+                int col = 0;
+                for (auto q : pr) { std::cout << esc( cur->rr, cur->rg, cur->rb) << q << escReset() << "  "; if (++col % 10 == 0) std::cout << "\n"; }
+                if (!pr.empty() && col % 10 != 0) std::cout << "\n";
+                std::cout << escDim() << "\n" << pr.size() << " primes <= " << capped << (capped < n ? "  (capped at 1000)" : "") << escReset() << "\n";
+            } else if (cmd == "factorize" || cmd == "factors") {
+                long long m = n;
+                std::cout << esc( cur->pr, cur->pg, cur->pb) << n << escReset() << " = ";
+                std::vector<long long> factors;
+                long long d = 2;
+                while (d * d <= m) {
+                    while (m % d == 0) { factors.push_back(d); m /= d; }
+                    d += (d == 2 ? 1 : 2);
+                }
+                if (m > 1) factors.push_back(m);
+                if (factors.empty()) { std::cout << escDim() << "(prime)" << escReset() << "\n"; }
+                else {
+                    for (size_t i = 0; i < factors.size(); i++) {
+                        if (i) std::cout << escDim() << " x " << escReset();
+                        std::cout << esc( cur->rr, cur->rg, cur->rb) << factors[i] << escReset();
+                    }
+                    std::cout << "\n";
                 }
             }
         } else if (cmd == "reset") {
