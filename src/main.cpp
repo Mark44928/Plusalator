@@ -626,16 +626,21 @@ int main(int argc, char** argv) {
             saveSettings(cur->name, angleName, name);
             std::cout << escDim() << "output mode: " << name << (g_radix == 10 ? " (automatic)" : "") << escReset() << "\n";
         } else if (cmd == "constants") {
-            static const std::vector<std::pair<std::string, double>> consts = {
-                {"pi", 3.14159265358979323846},
-                {"tau", 6.28318530717958647692},
-                {"e", 2.71828182845904523536},
-                {"phi", 1.61803398874989484820},
+            struct ConstGroup { const char* title; std::vector<std::pair<std::string, double>> items; };
+            static const std::vector<ConstGroup> groups = {
+                {"Geometry", {{"pi", 3.14159265358979323846}, {"tau", 6.28318530717958647692}, {"phi", 1.61803398874989484820}}},
+                {"Mechanics", {{"grav", 9.80665}, {"G", 6.67430e-11}}},
+                {"Thermodynamics", {{"kB", 1.380649e-23}, {"R", 8.314462618}, {"NA", 6.02214076e23}, {"c", 2.99792458e8}, {"qe", 1.602176634e-19}, {"h", 6.62607015e-34}, {"hbar", 1.054571817e-34}, {"sigma", 5.670374419e-8}}},
+                {"Electromagnetism", {{"eps0", 8.8541878128e-12}, {"mu0", 1.25663706212e-6}}},
+                {"Atoms & masses", {{"u", 1.66053906660e-27}, {"m_e", 9.1093837015e-31}, {"m_p", 1.67262192369e-27}, {"e", 2.71828182845904523536}}},
             };
-            for (auto& c : consts) {
-                std::cout << esc( cur->pr, cur->pg, cur->pb) << c.first << escReset()
-                          << " = " << esc( cur->rr, cur->rg, cur->rb)
-                          << formatNumber(c.second) << escReset() << "\n";
+            for (auto& g : groups) {
+                std::cout << escDim() << "─ " << g.title << " ─" << escReset() << "\n";
+                for (auto& c : g.items) {
+                    std::cout << esc( cur->pr, cur->pg, cur->pb) << "  " << c.first << escReset()
+                              << " = " << esc( cur->rr, cur->rg, cur->rb)
+                              << formatNumber(c.second) << escReset() << "\n";
+                }
             }
         } else if (cmd == "reset") {
             static const std::vector<std::string> keep = {"pi", "tau", "e", "phi", "ans"};

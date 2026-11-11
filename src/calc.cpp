@@ -259,12 +259,30 @@ std::unique_ptr<Expr> Parser::parsePrimary() {
 
 // ---------- context ----------
 
-Context::Context() : builtins{"pi", "tau", "e", "phi", "ans"} {
+Context::Context() : builtins{"pi", "tau", "e", "phi", "ans", "c", "grav", "h", "hbar", "eps0", "mu0", "G", "NA", "kB", "R", "qe", "u", "m_e", "m_p", "sigma"} {
     vars["pi"] = 3.14159265358979323846;
     vars["tau"] = 6.28318530717958647692;
     vars["e"] = 2.71828182845904523536;
     vars["phi"] = 1.61803398874989484820;
     vars["ans"] = 0.0;
+    // scientific constants
+    vars["c"] = 2.99792458e8;          // speed of light (m/s)
+    vars["grav"] = 9.80665;            // standard gravity (m/s^2)
+    vars["h"] = 6.62607015e-34;        // Planck constant (J·s)
+    vars["hbar"] = 1.054571817e-34;    // reduced Planck constant (J·s)
+    vars["e"] = 2.71828182845904523536; // Euler's number — already set above; kept for clarity
+    vars["eps0"] = 8.8541878128e-12;   // vacuum permittivity (F/m)
+    vars["mu0"] = 1.25663706212e-6;    // vacuum permeability (N/A^2)
+    vars["G"] = 6.67430e-11;           // gravitational constant (m^3/kg/s^2)
+    vars["NA"] = 6.02214076e23;        // Avogadro constant (mol^-1)
+    vars["kB"] = 1.380649e-23;         // Boltzmann constant (J/K)
+    vars["R"] = 8.314462618;           // molar gas constant (J/mol/K)
+    vars["qe"] = 1.602176634e-19;      // elementary charge (C)
+    vars["u"] = 1.66053906660e-27;     // atomic mass unit (kg)
+    vars["m_e"] = 9.1093837015e-31;    // electron mass (kg)
+    vars["m_p"] = 1.67262192369e-27;   // proton mass (kg)
+    vars["sigma"] = 5.670374419e-8;    // Stefan-Boltzmann constant (W/m^2/K^4)
+    vars["phi"] = 1.61803398874989484820; // golden ratio — already set above
 }
 
 bool Context::isBuiltin(const std::string& name) const {

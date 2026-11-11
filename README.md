@@ -49,7 +49,7 @@ make install    # PREFIX-aware: $PREFIX on Termux, /usr/local on Linux by defaul
   `min`, `max`, `clamp(x, lo, hi)`, `gcd`, `lcm`, `pow(b,e)`, `mod(x,y)`, `hypot(a,b)`,
   `ncr(n,r)` (combinations), `npr(n,r)` (permutations),
   `fact(n)` (factorial as a function form of `!`).
-- Constants: `pi`, `tau`, `e`, `phi`. `ans` = last result.
+- Constants, grouped and listed by `constants`: geometry (`pi`, `tau`, `phi`), mechanics (`grav`, `G`), thermodynamics (`kB`, `R`, `NA`, `c`, `h`, `hbar`, `sigma`), electromagnetism (`eps0`, `mu0`), atom/masses (`u`, `m_e`, `m_p`, `e`), and `ans` = last result.
 - Assignment `x=5`; user functions `f(x)=x^2+1` (body cloned once at definition, depth cap 64,
   graceful "recursion too deep", never a stack crash).
 - Errors print a caret under the offending token, exit code 0, never crash/hang (fuzz-gated).
