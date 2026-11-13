@@ -513,8 +513,10 @@ int main(int argc, char** argv) {
     };
 
     printBanner();
-    std::cout << escDim() << "Tip: type " << escBold() << "help" << escReset()
-              << escDim() << " for commands, or enter an expression to calculate." << escReset() << "\n";
+    std::cout << esc(cur->hr, cur->hg, cur->hb) << "Tip: type " << escReset() << escBold()
+              << esc(cur->pr, cur->pg, cur->pb) << "help" << escReset()
+              << esc(cur->hr, cur->hg, cur->hb) << " for commands, or enter an expression to calculate."
+              << escReset() << "\n";
 
     while (true) {
         printLine1();
@@ -550,7 +552,7 @@ int main(int argc, char** argv) {
         if (!arg.empty() && noArgCmds.count(cmd)) cmd = "\x01expr"; // sentinel: evaluate as expression
 
         if (cmd == "help") {
-            const int W = 64, LC = 22, RC = 36;
+            const int W = 72, LC = 22, RC = 44;
             std::cout << esc( cur->vr, cur->vg, cur->vb) << "┌" << rep(W - 2, "─") << "┐" << escReset() << "\n";
             std::cout << esc( cur->vr, cur->vg, cur->vb) << "│" << escDim()
                       << std::string(2, ' ') << "Plusalator" << escReset()
@@ -575,7 +577,7 @@ int main(int argc, char** argv) {
                 {"asinh/acosh/atanh", "inverse hyperbolic sine/cosine/tangent"},
                 {"gcd/lcm", "greatest common / least common multiple"},
                 {"ncr/npr", "combinations / permutations of n things r at a time"},
-                {"clamp", "clamp(x, lo, hi) — constrain a number to a range"},
+                {"clamp", "constrain x to [lo, hi]"},
                 {"sign/fact", "sign of x (signum) / x! factorial"},
                 {"log2", "base-2 logarithm"},
                 {"ms <expr>", "store expression into memory"},
@@ -796,7 +798,7 @@ int main(int argc, char** argv) {
         } else if (cmd == "settings") {
             while (true) {
                 printLine1();
-                std::cout << escBold() << esc(cur->pr, cur->pg, cur->pb) << "⚙ settings" << escReset() << "\n";
+                std::cout << escBold() << esc(cur->pr, cur->pg, cur->pb) << "⚙ settings" << escReset() << "\n\n";
                 std::cout << escDim() << "  1 · theme    current: " << cur->name << escReset() << "\n";
                 std::cout << escDim() << "  2 · config   " << configPath() << escReset() << "\n";
                 std::cout << escDim() << "  3 · back" << escReset() << "\n";
@@ -810,7 +812,7 @@ int main(int argc, char** argv) {
                 if (choice == "theme" || choice == "1") {
                     while (true) {
                         printLine1();
-                        std::cout << escBold() << esc(cur->pr, cur->pg, cur->pb) << "⚙ settings › theme" << escReset() << "\n";
+                        std::cout << escBold() << esc(cur->pr, cur->pg, cur->pb) << "⚙ settings › theme" << escReset() << "\n\n";
                         int idx = 0;
                         for (auto& t : ALL_THEMES) {
                             std::cout << escDim() << "  " << (++idx) << escReset() << " ";
