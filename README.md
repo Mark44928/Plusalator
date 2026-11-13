@@ -5,6 +5,8 @@ Engine semantics faithfully modeled on Qalculate (qalc).
 
 [![CI](https://github.com/Mark44928/Plusalator/actions/workflows/ci.yml/badge.svg)](https://github.com/Mark44928/Plusalator/actions/workflows/ci.yml)
 
+![Plusalator — Qalculate-flavored C++17 REPL](docs/screenshot.png)
+
 ```
 ⟨ plusa ⟩ ➤ 2+3*4
 = 14
