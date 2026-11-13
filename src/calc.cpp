@@ -393,8 +393,8 @@ static double callBuiltin(Context& ctx, const std::string& name, const std::vect
     if (name == "acosh") { if (a0 < 1) throw CalcError("acosh of value less than 1", 0); return std::acosh(a0); }
     if (name == "atanh") { if (a0 < -1 || a0 >= 1) throw CalcError("atanh out of (-1, 1)", 0); return std::atanh(a0); }
     if (name == "isprime") { long long n = (long long)std::floor(std::abs(a0)); if (n < 2) return 0.0; if (n == 2) return 1.0; if ((n & 1) == 0) return 0.0; for (long long d = 3; d <= n / d; d += 2) { if (n % d == 0) return 0.0; } return 1.0; }
-    if (name == "nextprime") { long long n = (long long)std::floor(std::abs(a0)) + 1; if (n < 2) return 2.0; if ((n & 1) == 0) n++; while (!isprime_helper(n)) { n += 2; if (n > 1000000000) throw CalcError("nextprime out of range", 0); } return (double)n; }
-    if (name == "prevprime") { long long n = (long long)std::floor(std::abs(a0)) - 1; if (n < 2) { throw CalcError("prevprime: no prime strictly before argument", 0); } if ((n & 1) == 0) n--; while (!isprime_helper(n)) { n -= 2; if (n < 2) throw CalcError("prevprime: no prime strictly before argument", 0); } return (double)n; }
+    if (name == "nextprime") { long long n = (long long)std::floor(std::abs(a0)) + 1; if (n <= 2) return 2.0; if ((n & 1) == 0) n++; while (!isprime_helper(n)) { n += 2; if (n > 1000000000) throw CalcError("nextprime out of range", 0); } return (double)n; }
+    if (name == "prevprime") { long long n = (long long)std::floor(std::abs(a0)) - 1; if (n < 2) { throw CalcError("prevprime: no prime strictly before argument", 0); } if (n == 2) return 2.0; if ((n & 1) == 0) n--; while (!isprime_helper(n)) { n -= 2; if (n < 2) throw CalcError("prevprime: no prime strictly before argument", 0); } return (double)n; }
     throw CalcError("unknown function: " + name, 0);
 }
 

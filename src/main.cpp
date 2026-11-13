@@ -751,11 +751,8 @@ int main(int argc, char** argv) {
                 }
             }
         } else if (cmd == "reset") {
-            static const std::vector<std::string> keep = {"pi", "tau", "e", "phi", "ans"};
             for (auto it = ctx.vars.begin(); it != ctx.vars.end(); ) {
-                bool protected_ = false;
-                for (auto& k : keep) if (it->first == k) { protected_ = true; break; }
-                if (protected_) { it->second = (it->first == "ans") ? 0.0 : it->second; ++it; }
+                if (ctx.isBuiltin(it->first)) { it->second = (it->first == "ans") ? 0.0 : it->second; ++it; }
                 else it = ctx.vars.erase(it);
             }
             ctx.funcs.clear();
@@ -764,9 +761,7 @@ int main(int argc, char** argv) {
             if (arg.empty()) {
                 std::cout << esc( cur->er, cur->eg, cur->eb) << "usage: del <name>" << escReset() << "\n";
             } else {
-                static const std::vector<std::string> protect = {"pi", "tau", "e", "phi", "ans"};
-                bool protected_ = false;
-                for (auto& k : protect) if (arg == k) { protected_ = true; break; }
+                bool protected_ = ctx.isBuiltin(arg);
                 if (protected_) {
                     std::cout << esc( cur->er, cur->eg, cur->eb) << "cannot delete built-in: " << arg << escReset() << "\n";
                 } else if (ctx.vars.erase(arg)) {
