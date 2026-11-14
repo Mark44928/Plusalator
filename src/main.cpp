@@ -265,8 +265,9 @@ static std::string formatValue(double v) {
     if (!integral) return base;
     if (g_radix == 16) {
         char buf[64];
-        std::snprintf(buf, sizeof buf, "%llx", (long long)v);
-        return std::string("0x") + buf;
+        unsigned long long u = (v < 0) ? (unsigned long long)(-v) : (unsigned long long)v;
+        std::snprintf(buf, sizeof buf, "%llx", u);
+        return std::string("0x") + (v < 0 ? "-" : "") + buf;
     }
     if (g_radix == 2) {
         if (v == 0) return "0b0";
