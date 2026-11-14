@@ -125,6 +125,9 @@ factorize 360        # or `factors` — prints 360 = 2 × 2 × 2 × 3 × 3 × 5
 | `vars` | List all variables and their values |
 | `funcs` | List user-defined functions with signatures |
 | `history` | Show command history |
+| `export vars\|history [path]` | **new** — write variables or history to CSV |
+| `plot <f(x)>[,<g(x)>] [xmin xmax]` | **new** — ASCII plot; comma overlays up to 3 curves |
+| `bench <expr> [n]` | **new** — time n evaluations, µs/eval + total |
 | `clear` | Clear screen and re-banner |
 | `theme` | List available themes with color swatches |
 | `settings` | Interactive settings menu (switch theme) |
