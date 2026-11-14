@@ -11,6 +11,8 @@
 #include <cstdio>
 #include <csignal>
 #include <set>
+#include <sstream>
+#include <chrono>
 #include <algorithm>
 #include <cmath>
 
@@ -56,7 +58,7 @@ struct Theme {
 
 static const std::vector<Theme> ALL_THEMES = {
     // Original themes
-    {"greenit", 0, 208, 64, 208, 208, 208, 255, 68, 68, 138, 138, 138, 74, 74, 74, 0, 208, 64},
+    {"greenit", 123, 216, 143, 201, 228, 206, 192, 122, 110, 120, 153, 127, 18, 42, 31, 99, 201, 168},
     {"mono", 220, 220, 220, 240, 240, 240, 255, 80, 80, 130, 130, 130, 80, 80, 80, 220, 220, 220},
     {"ocean", 0, 180, 255, 240, 240, 240, 255, 100, 100, 150, 150, 150, 90, 90, 90, 0, 180, 255},
     {"ember", 255, 120, 40, 240, 240, 240, 255, 100, 80, 150, 150, 150, 90, 80, 70, 255, 120, 40},
@@ -77,16 +79,16 @@ static const std::vector<Theme> ALL_THEMES = {
     {"dracula", 248, 248, 242, 248, 248, 242, 255, 85, 85, 98, 114, 164, 40, 42, 54, 189, 147, 249},
     
     // Gruvbox Dark - Retro groove with warm colors
-    {"gruvbox", 235, 219, 178, 235, 219, 178, 251, 73, 52, 40, 40, 40, 131, 165, 152, 211, 134, 155},
+    {"gruvbox", 235, 219, 178, 235, 219, 178, 251, 73, 52, 168, 153, 132, 80, 73, 69, 211, 134, 155},
     
     // Solarized Dark - Scientific, colorblind-friendly
-    {"solarized", 131, 148, 150, 131, 148, 150, 220, 50, 47, 101, 123, 131, 0, 43, 54, 38, 139, 210},
+    {"solarized", 131, 148, 150, 131, 148, 150, 220, 50, 47, 88, 110, 117, 7, 54, 66, 38, 139, 210},
     
     // Cyberpunk - Neon aesthetic
     {"cyberpunk", 0, 255, 255, 220, 220, 220, 255, 0, 150, 150, 50, 200, 80, 80, 200, 0, 255, 255},
     
     // Matrix - Green on black, classic hacker look
-    {"matrix", 0, 255, 43, 0, 255, 0, 0, 255, 0, 0, 100, 0, 0, 50, 50, 0, 255, 43},
+    {"matrix", 0, 255, 43, 0, 255, 0, 0, 255, 0, 0, 179, 0, 0, 50, 50, 0, 255, 43},
     
     // Sunset - Warm orange/pink gradient
     {"sunset", 255, 154, 77, 255, 255, 255, 255, 100, 50, 255, 180, 100, 120, 80, 60, 255, 119, 197},
@@ -566,6 +568,9 @@ int main(int argc, char** argv) {
                 {"vars", "list variables and values"},
                 {"funcs", "list user functions with signatures"},
                 {"history", "show command history"},
+                {"export vars|history [path]", "write variables or history to CSV"},
+                {"plot <f(x)>[,<g(x)>] [xmin xmax]", "ASCII plot, comma to overlay curves"},
+                {"bench <expr> [n]", "time n evaluations (default 100000)"},
                 {"clear", "clear screen and re-banner"},
                 {"theme", "list available themes"},
                 {"settings", "interactive settings menu (switch theme)"},
@@ -637,6 +642,207 @@ int main(int argc, char** argv) {
             }
             for (size_t i = 0; i < h.size(); i++) {
                 std::cout << escDim() << (i + 1) << escReset() << "  " << h[i] << "\n";
+            }
+        } else if (cmd == "export") {
+            std::istringstream es(arg);
+            std::string kind, path;
+            es >> kind >> path;
+            auto csvQuote = [](const std::string& s) {
+                std::string out = "\"";
+                for (char ch : s) { if (ch == '"') out += "\"\""; else out += ch; }
+                out += '"';
+                return out;
+            };
+            if (kind != "vars" && kind != "history") {
+                std::cout << escDim() << "usage: export vars|history [path]" << escReset() << "\n";
+            } else {
+                if (path.empty()) {
+                    std::string cfg = configPath();
+                    size_t slash = cfg.find_last_of('/');
+                    path = (slash == std::string::npos ? std::string(".") : cfg.substr(0, slash)) + "/" + kind + ".csv";
+                }
+                std::ofstream out(path);
+                if (!out) {
+                    std::cout << esc( cur->er, cur->eg, cur->eb) << "cannot write " << path << escReset() << "\n";
+                } else {
+                    if (kind == "vars") {
+                        std::vector<std::pair<std::string, double>> rows(ctx.vars.begin(), ctx.vars.end());
+                        std::sort(rows.begin(), rows.end(), [](auto& a, auto& b){ return a.first < b.first; });
+                        out << "name,value\n";
+                        for (auto& kv : rows) out << csvQuote(kv.first) << "," << csvQuote(formatNumber(kv.second)) << "\n";
+                    } else {
+                        out << "index,expression\n";
+                        const auto& h = edit.history();
+                        for (size_t i = 0; i < h.size(); i++) out << (i + 1) << "," << csvQuote(h[i]) << "\n";
+                    }
+                    out.close();
+                    std::cout << esc( cur->pr, cur->pg, cur->pb) << "exported " << kind << escReset()
+                              << escDim() << " → " << path << escReset() << "\n";
+                }
+            }
+        } else if (cmd == "bench") {
+            std::vector<std::string> tokens;
+            {
+                std::istringstream ts(arg);
+                std::string tok;
+                while (ts >> tok) tokens.push_back(tok);
+            }
+            long n = 100000;
+            size_t exprCount = tokens.size();
+            if (!tokens.empty()) {
+                try { n = std::stol(tokens.back()); exprCount = tokens.size() - 1; }
+                catch (...) {}
+            }
+            std::string expr;
+            for (size_t i = 0; i < exprCount; i++) { if (i) expr += ' '; expr += tokens[i]; }
+            if (n < 1) n = 1;
+            if (n > 10000000) n = 10000000;
+            if (expr.empty()) {
+                std::cout << escDim() << "usage: bench <expr> [n]   (default 100000 evaluations)" << escReset() << "\n";
+            } else {
+                volatile double sink = 0;
+                bool failed = false;
+                auto start = std::chrono::steady_clock::now();
+                for (long i = 0; i < n; i++) {
+                    try { sink += evalLine(expr, ctx); }
+                    catch (const CalcError& err) {
+                        std::cout << esc( cur->er, cur->eg, cur->eb) << err.msg << escReset() << "\n";
+                        failed = true;
+                        break;
+                    }
+                }
+                auto stop = std::chrono::steady_clock::now();
+                if (!failed) {
+                    double us = std::chrono::duration<double, std::micro>(stop - start).count();
+                    std::cout << esc( cur->pr, cur->pg, cur->pb) << "bench" << escReset()
+                              << " " << expr << escDim() << "  ·  " << n << " evals  ·  "
+                              << escReset() << esc( cur->rr, cur->rg, cur->rb)
+                              << formatNumber(us / (double)n) << " µs/eval" << escReset()
+                              << escDim() << "  ·  total " << formatNumber(us / 1000.0) << " ms"
+                              << escReset() << "\n";
+                }
+            }
+        } else if (cmd == "plot") {
+            // plot <f(x)>[,<g(x)>] [xmin xmax] — the last two tokens are the
+            // range when both parse as numbers; commas overlay up to 3 curves.
+            std::vector<std::string> tokens;
+            {
+                std::istringstream ts(arg);
+                std::string tok;
+                while (ts >> tok) tokens.push_back(tok);
+            }
+            double xmin = -10.0, xmax = 10.0;
+            size_t exprCount = tokens.size();
+            if (tokens.size() >= 3) {
+                try {
+                    double a = std::stod(tokens[tokens.size() - 2]);
+                    double b = std::stod(tokens[tokens.size() - 1]);
+                    xmin = a; xmax = b;
+                    exprCount -= 2;
+                } catch (...) {}
+            }
+            std::string expr;
+            for (size_t i = 0; i < exprCount; i++) { if (i) expr += ' '; expr += tokens[i]; }
+
+            if (expr.empty()) {
+                std::cout << escDim() << "usage: plot <f(x)>[,<g(x)>] [xmin xmax]   e.g. plot sin(x),cos(x) -6.28 6.28" << escReset() << "\n";
+            } else if (!(xmax > xmin)) {
+                std::cout << esc( cur->er, cur->eg, cur->eb) << "range needs xmax > xmin" << escReset() << "\n";
+            } else {
+                std::vector<std::string> funcs;
+                {
+                    size_t start = 0;
+                    while (start <= expr.size()) {
+                        size_t comma = expr.find(',', start);
+                        std::string part = expr.substr(start, comma == std::string::npos ? std::string::npos : comma - start);
+                        size_t f = part.find_first_not_of(" \t");
+                        size_t l = part.find_last_not_of(" \t");
+                        if (f != std::string::npos) funcs.push_back(part.substr(f, l - f + 1));
+                        if (comma == std::string::npos) break;
+                        start = comma + 1;
+                    }
+                }
+                if (funcs.empty()) funcs.push_back(expr);
+                if (funcs.size() > 3) funcs.resize(3);
+
+                bool hadX = ctx.vars.find("x") != ctx.vars.end();
+                double oldX = hadX ? ctx.vars.at("x") : 0.0;
+
+                const int W = 57, H = 17;
+                std::vector<std::vector<double>> ys(funcs.size(), std::vector<double>(W, 0.0));
+                std::vector<std::vector<bool>> okv(funcs.size(), std::vector<bool>(W, false));
+                double ymin = 0, ymax = 0;
+                bool any = false;
+                for (size_t fi = 0; fi < funcs.size(); fi++) {
+                    for (int i = 0; i < W; i++) {
+                        double x = xmin + (xmax - xmin) * i / (double)(W - 1);
+                        ctx.vars["x"] = x;
+                        try {
+                            double y = evalLine(funcs[fi], ctx);
+                            if (std::isfinite(y)) {
+                                ys[fi][i] = y;
+                                okv[fi][i] = true;
+                                if (!any) { ymin = ymax = y; any = true; }
+                                else { ymin = std::min(ymin, y); ymax = std::max(ymax, y); }
+                            }
+                        } catch (const CalcError&) {}
+                    }
+                }
+                if (hadX) ctx.vars["x"] = oldX; else ctx.vars.erase("x");
+
+                if (!any) {
+                    std::cout << esc( cur->er, cur->eg, cur->eb) << "no real values for '" << expr
+                              << "' in [" << formatNumber(xmin) << ", " << formatNumber(xmax) << "]" << escReset() << "\n";
+                } else {
+                    double span = ymax - ymin;
+                    if (span < 1e-12) span = 1.0;
+                    ymin -= span * 0.08;
+                    ymax += span * 0.08;
+                    auto rowOf = [&](double y) {
+                        long r = std::lround((ymax - y) / (ymax - ymin) * (H - 1));
+                        return (int)std::max<long>(0, std::min<long>(H - 1, r));
+                    };
+                    std::vector<std::string> g(H, std::string(W, ' '));
+                    int row0 = (ymin <= 0 && 0 <= ymax) ? rowOf(0) : -1;
+                    int col0 = (xmin <= 0 && 0 <= xmax)
+                                   ? (int)std::lround((0 - xmin) / (xmax - xmin) * (W - 1)) : -1;
+                    if (row0 >= 0) for (int c = 0; c < W; c++) g[row0][c] = (c == col0) ? '+' : '-';
+                    if (col0 >= 0) for (int r = 0; r < H; r++) if (g[r][col0] == ' ') g[r][col0] = '|';
+
+                    static const char marks[3] = {'#', '+', '*'};
+                    for (size_t fi = 0; fi < funcs.size(); fi++) {
+                        int prev = -1;
+                        for (int c = 0; c < W; c++) {
+                            if (!okv[fi][c]) { prev = -1; continue; }
+                            int r = rowOf(ys[fi][c]);
+                            if (prev >= 0) {
+                                int lo = std::min(prev, r), hi = std::max(prev, r);
+                                for (int rr = lo; rr <= hi; rr++) g[rr][c] = marks[fi];
+                            }
+                            g[r][c] = marks[fi];
+                            prev = r;
+                        }
+                    }
+                    std::cout << "\n";
+                    for (int r = 0; r < H; r++) {
+                        for (char ch : g[r]) {
+                            if (ch == '#') std::cout << esc( cur->ar, cur->ag, cur->ab) << "█" << escReset();
+                            else if (ch == '+') std::cout << esc( cur->rr, cur->rg, cur->rb) << "▚" << escReset();
+                            else if (ch == '*') std::cout << esc( cur->hr, cur->hg, cur->hb) << "▓" << escReset();
+                            else if (ch == ' ') std::cout << ' ';
+                            else std::cout << escDim() << ch << escReset();
+                        }
+                        std::cout << "\n";
+                    }
+                    std::cout << escDim() << "x " << formatNumber(xmin) << " … " << formatNumber(xmax)
+                              << "   y " << formatNumber(ymin) << " … " << formatNumber(ymax) << escReset() << "\n";
+                    for (size_t fi = 0; fi < funcs.size(); fi++) {
+                        int rr2 = fi == 0 ? cur->ar : fi == 1 ? cur->rr : cur->hr;
+                        int gg2 = fi == 0 ? cur->ag : fi == 1 ? cur->rg : cur->hg;
+                        int bb2 = fi == 0 ? cur->ab : fi == 1 ? cur->rb : cur->hb;
+                        std::cout << "  " << esc(rr2, gg2, bb2) << marks[fi] << "  " << funcs[fi] << escReset() << "\n";
+                    }
+                }
             }
         } else if (cmd == "ans") {
             std::cout << esc( cur->pr, cur->pg, cur->pb) << "ans" << escReset()
