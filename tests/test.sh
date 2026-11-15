@@ -229,6 +229,14 @@ assert_approx "NA"            "6.02214076e23"
 assert_approx "kB"            "1.380649e-23"
 assert_approx "u"             "1.6605390666e-27"
 
+echo "== stats command =="
+stats_out=$(HOME="$TMPDIR/plusa-persist" timeout 10 bash -c 'printf "stats 1 2 3 4\nquit\n" | "'"$BIN"'"' 2>&1 | sed 's/\x1b\[[0-9;?]*[a-zA-Z]//g')
+if printf '%s\n' "$stats_out" | grep -q "mean" && printf '%s\n' "$stats_out" | grep -q "2.5" && printf '%s\n' "$stats_out" | grep -qE "1\.1180"; then
+  PASS=$((PASS + 1))
+else
+  fail "stats 1 2 3 4 -> got: $stats_out"
+fi
+
 echo
 echo "RESULT: $PASS passed, $FAIL failed"
 [ "$FAIL" = "0" ]

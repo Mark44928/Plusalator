@@ -128,6 +128,7 @@ factorize 360        # or `factors` — prints 360 = 2 × 2 × 2 × 3 × 3 × 5
 | `export vars\|history [path]` | **new** — write variables or history to CSV |
 | `plot <f(x)>[,<g(x)>] [xmin xmax]` | **new** — ASCII plot; comma overlays up to 3 curves |
 | `bench <expr> [n]` | **new** — time n evaluations, µs/eval + total |
+| `stats <n...>` | **new** — count/min/max/sum/mean/median/stddev |
 | `clear` | Clear screen and re-banner |
 | `theme` | List available themes with color swatches |
 | `settings` | Interactive settings menu (switch theme) |

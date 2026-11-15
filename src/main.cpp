@@ -571,6 +571,7 @@ int main(int argc, char** argv) {
                 {"history", "show command history"},
                 {"export vars|history [path]", "write variables or history to CSV"},
                 {"plot <f(x)>[,<g(x)>] [xmin xmax]", "ASCII plot, comma to overlay curves"},
+                {"stats <n...>", "count/min/max/sum/mean/median/stddev"},
                 {"bench <expr> [n]", "time n evaluations (default 100000)"},
                 {"clear", "clear screen and re-banner"},
                 {"theme", "list available themes"},
@@ -919,6 +920,38 @@ int main(int argc, char** argv) {
                               << formatNumber(c.second) << escReset() << "\n";
                 }
             }
+        } else if (cmd == "stats" || cmd == "stat") {
+            std::string a = arg;
+            for (auto& ch : a) if (ch == ',') ch = ' ';
+            std::istringstream ss(a);
+            std::vector<double> v;
+            double x;
+            while (ss >> x) v.push_back(x);
+            if (v.empty()) {
+                std::cout << escDim() << "usage: stats <n1> <n2> ...   (or comma-separated)" << escReset() << "\n";
+                continue;
+            }
+            std::sort(v.begin(), v.end());
+            double sum = 0;
+            for (double q : v) sum += q;
+            double mean = sum / v.size();
+            double med = (v.size() % 2) ? v[v.size() / 2]
+                                        : (v[v.size() / 2 - 1] + v[v.size() / 2]) / 2;
+            double var = 0;
+            for (double q : v) var += (q - mean) * (q - mean);
+            var /= v.size();
+            std::cout << esc( cur->pr, cur->pg, cur->pb) << "stats" << escReset()
+                      << escDim() << "  ·  n=" << v.size() << escReset() << "\n";
+            auto row = [&](const char* name, double value) {
+                std::cout << escDim() << "  " << std::left << std::setw(8) << name << escReset()
+                          << esc( cur->rr, cur->rg, cur->rb) << formatNumber(value) << escReset() << "\n";
+            };
+            row("min", v.front());
+            row("max", v.back());
+            row("sum", sum);
+            row("mean", mean);
+            row("median", med);
+            row("stddev", std::sqrt(var));
         } else if (cmd == "primes" || cmd == "factorize" || cmd == "factors") {
             long long n = 0;
             try { n = arg.empty() ? 100 : std::stoll(arg); }
