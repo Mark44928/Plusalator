@@ -141,7 +141,7 @@ if [ "$MENU" = "1" ] && [ "$NO_BUILD" = "0" ] && [ -t 0 ] && [ -t 1 ] && have fz
 fi
 
 if [ "$NO_BUILD" = "0" ]; then
-    if [ ! -x "$REPO_DIR/plusalator" ] || [ "$REPO_DIR/src/main.cpp" -nt "$REPO_DIR/plusalator" ] || [ "$REPO_DIR/src/calc.cpp" -nt "$REPO_DIR/plusalator" ]; then
+    if [ ! -x "$REPO_DIR/plusalator" ] || [ -n "$(find "$REPO_DIR/src" -newer "$REPO_DIR/plusalator" -print -quit)" ]; then
         have make || die "make is required (or use --no-build with an existing binary)"
         info "building with make"
         make -C "$REPO_DIR"

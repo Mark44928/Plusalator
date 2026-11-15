@@ -17,3 +17,5 @@ jobs:
       - name: Build and run the gate
         # g++ is guaranteed on the runner image; the Makefile honors CXX.
         run: make check CXX=g++
+      - name: Installer smoke test
+        run: bash tests/install-smoke.sh
