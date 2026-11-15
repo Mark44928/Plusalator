@@ -1,6 +1,7 @@
 #include "calc.h"
 #include "lineedit.h"
 #include "banner.h"
+#include <iomanip>
 #include <iostream>
 #include <string>
 #include <fstream>
