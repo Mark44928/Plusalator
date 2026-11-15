@@ -24,7 +24,12 @@ make check      # build + run tests/test.sh + syntax check (gate)
 make banner     # regenerate src/banner.h from figlet
 make clean
 make install    # PREFIX-aware: $PREFIX on Termux, /usr/local on Linux by default
+./install.sh    # or: fzf menu, backups, manifest, --uninstall
 ```
+
+The installer defaults to `$PREFIX` on Termux and `~/.local` elsewhere; use
+`--prefix DIR` to override, `--no-menu` for scripts, and `--uninstall` to
+remove the recorded binary.
 
 **Requirements:**
 - C++17 compiler (`clang++` or `g++`)
