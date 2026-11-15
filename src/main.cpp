@@ -572,6 +572,7 @@ int main(int argc, char** argv) {
                 {"history", "show command history"},
                 {"export vars|history [path]", "write variables or history to CSV"},
                 {"plot <f(x)>[,<g(x)>] [xmin xmax]", "ASCII plot, comma to overlay curves"},
+                {"table <f(x)> [xmin xmax [step]]", "evaluate f(x) over a range"},
                 {"stats <n...>", "count/min/max/sum/mean/median/stddev"},
                 {"bench <expr> [n]", "time n evaluations (default 100000)"},
                 {"clear", "clear screen and re-banner"},
@@ -846,6 +847,66 @@ int main(int argc, char** argv) {
                         std::cout << "  " << esc(rr2, gg2, bb2) << marks[fi] << "  " << funcs[fi] << escReset() << "\n";
                     }
                 }
+            }
+        } else if (cmd == "table") {
+            // table <f(x)> [xmin xmax [step]] — sample f(x) at a fixed step.
+            std::vector<std::string> tokens;
+            {
+                std::istringstream ts(arg);
+                std::string tok;
+                while (ts >> tok) tokens.push_back(tok);
+            }
+            double xmin = -5.0, xmax = 5.0, step = 0.0;
+            size_t exprCount = tokens.size();
+            auto number = [](const std::string& s, double& out) {
+                try {
+                    size_t used = 0;
+                    out = std::stod(s, &used);
+                    return used == s.size();
+                } catch (...) { return false; }
+            };
+            if (tokens.size() >= 4) {
+                double a = 0, b = 0, c = 0;
+                if (number(tokens[tokens.size() - 3], a)
+                    && number(tokens[tokens.size() - 2], b)
+                    && number(tokens[tokens.size() - 1], c) && c > 0) {
+                    xmin = a; xmax = b; step = c; exprCount -= 3;
+                }
+            }
+            if (exprCount == tokens.size() && tokens.size() >= 3) {
+                double a = 0, b = 0;
+                if (number(tokens[tokens.size() - 2], a) && number(tokens[tokens.size() - 1], b)) {
+                    xmin = a; xmax = b; exprCount -= 2;
+                }
+            }
+            std::string expr;
+            for (size_t i = 0; i < exprCount; i++) { if (i) expr += ' '; expr += tokens[i]; }
+
+            if (expr.empty()) {
+                std::cout << escDim() << "usage: table <f(x)> [xmin xmax [step]]   e.g. table x^2 0 4 1" << escReset() << "\n";
+            } else if (!(xmax > xmin)) {
+                std::cout << esc( cur->er, cur->eg, cur->eb) << "range needs xmax > xmin" << escReset() << "\n";
+            } else {
+                if (step <= 0) step = (xmax - xmin) / 10.0;
+                double rawRows = std::floor((xmax - xmin) / step + 1e-9) + 1.0;
+                long rows = 100;
+                if (std::isfinite(rawRows) && rawRows < 100.0) rows = rawRows < 1.0 ? 1 : (long)rawRows;
+                bool hadX = ctx.vars.find("x") != ctx.vars.end();
+                double oldX = hadX ? ctx.vars.at("x") : 0.0;
+                std::cout << escDim() << std::setw(16) << "x" << std::setw(18) << "f(x)" << escReset() << "\n";
+                for (long r = 0; r < rows; r++) {
+                    double x = xmin + step * (double)r;
+                    if (x > xmax + 1e-9) break;
+                    ctx.vars["x"] = x;
+                    std::string value;
+                    try { value = formatNumber(evalLine(expr, ctx)); }
+                    catch (const CalcError& err) { value = std::string("error: ") + err.msg; }
+                    std::cout << esc( cur->pr, cur->pg, cur->pb) << std::setw(16)
+                              << formatNumber(x) << escReset()
+                              << esc( cur->rr, cur->rg, cur->rb) << std::setw(18)
+                              << value << escReset() << "\n";
+                }
+                if (hadX) ctx.vars["x"] = oldX; else ctx.vars.erase("x");
             }
         } else if (cmd == "ans") {
             std::cout << esc( cur->pr, cur->pg, cur->pb) << "ans" << escReset()

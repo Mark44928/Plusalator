@@ -237,6 +237,23 @@ else
   fail "stats 1 2 3 4 -> got: $stats_out"
 fi
 
+echo "== table command =="
+table_out=$(HOME="$TMPDIR/plusa-persist" timeout 10 bash -c 'printf "table x^2 0 2 1\nquit\n" | "'"$BIN"'"' 2>&1 | sed 's/\x1b\[[0-9;?]*[a-zA-Z]//g')
+if printf '%s\n' "$table_out" | grep -q "f(x)" && printf '%s\n' "$table_out" | grep -qE '[[:space:]]4$' && printf '%s\n' "$table_out" | grep -qE '[[:space:]]1$'; then
+  PASS=$((PASS + 1))
+else
+  fail "table x^2 0 2 1 -> got: $table_out"
+fi
+
+echo "== table clamps huge row counts =="
+tiny_out=$(HOME="$TMPDIR/plusa-persist" timeout 10 bash -c 'printf "table x 0 1 1e-300\nquit\n" | "'"$BIN"'"' 2>&1 | sed 's/\x1b\[[0-9;?]*[a-zA-Z]//g')
+tiny_rows=$(printf '%s\n' "$tiny_out" | grep -cE '^[[:space:]]+[0-9]')
+if [ "$tiny_rows" -eq 100 ]; then
+  PASS=$((PASS + 1))
+else
+  fail "table 1e-300 step -> $tiny_rows rows (want 100): $tiny_out"
+fi
+
 echo
 echo "RESULT: $PASS passed, $FAIL failed"
 [ "$FAIL" = "0" ]
