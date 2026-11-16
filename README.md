@@ -225,6 +225,7 @@ via `TIOCGWINSZ` (falls back to 80 columns).
 
 Tiny, dependency-free tools from the same family:
 
+- [Pythonator](https://github.com/Mark44928/Pythonator) — the Python rewrite of Plusalator: same calculator semantics, pure standard-library
 - [plusafetch](https://github.com/Mark44928/plusafetch) — C++23 fetch for Termux — ~23 ms, zero subprocesses on the default path
 - [GrubBlastersHTML](https://github.com/Mark44928/GrubBlastersHTML) — Turn-based artillery in one HTML file — 72 weapons, fully destructible terrain
 - [SnakTUI](https://github.com/Mark44928/SnakTUI) — modern Snake for your terminal — Textual + Python
