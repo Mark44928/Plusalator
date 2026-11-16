@@ -2,6 +2,8 @@
 #include <termios.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <fcntl.h>
+#include <string>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
@@ -51,19 +53,37 @@ void LineEditor::loadHistory() {
     while (fgets(buf, sizeof buf, f)) {
         size_t len = strlen(buf);
         while (len > 0 && (buf[len - 1] == '\n' || buf[len - 1] == '\r')) buf[--len] = 0;
-        if (len > 0) history_.push_back(buf);
+        if (len == 0) continue;
+        // History lines are echoed to the terminal; drop control bytes so a
+        // planted escape sequence can't drive the display.
+        std::string clean;
+        clean.reserve(len);
+        for (size_t i = 0; i < len; i++) {
+            unsigned char c = (unsigned char)buf[i];
+            if (c >= 32 && c != 127) clean += (char)c;
+        }
+        if (!clean.empty()) history_.push_back(clean);
     }
     fclose(f);
     while (history_.size() > 200) history_.erase(history_.begin());
 }
 
 void LineEditor::saveHistory() {
-    FILE* f = fopen(histPath_.c_str(), "w");
-    if (!f) return;
+    // Temp file next to the destination (unique via mkstemp) + rename(2):
+    // never follows a pre-planted symlink at the fixed path, always the
+    // same filesystem, mode 0600 (mkstemp default) since the file may hold
+    // sensitive input.
+    std::string tmp = histPath_ + ".tmp.XXXXXX";
+    int fd = mkstemp(tmp.data());
+    if (fd < 0) return;
+    FILE* f = fdopen(fd, "w");
+    if (!f) { close(fd); unlink(tmp.c_str()); return; }
     size_t start = history_.size() > 200 ? history_.size() - 200 : 0;
     for (size_t i = start; i < history_.size(); i++)
         fprintf(f, "%s\n", history_[i].c_str());
     fclose(f);
+    if (rename(tmp.c_str(), histPath_.c_str()) != 0)
+        remove(tmp.c_str());
 }
 
 void LineEditor::addHistory(const std::string& line) {
