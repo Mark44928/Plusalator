@@ -8,7 +8,10 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 #include <cerrno>
+#include <cstdlib>
+#include <cctype>
 #include <cstdio>
 #include <csignal>
 #include <set>
@@ -30,6 +33,30 @@ static void printCaretError(const std::string& input, const CalcError& err) {
     if (col > input.size() + 1) col = input.size() + 1;
     std::cout << std::string(col - 1, ' ') << "^\n";
     std::cout << err.msg << "\n";
+}
+
+// writeFileAtomic — write to a sibling temp file (unique via mkstemp, never
+// O_EXCL-less) then rename(2) over the destination. Never follows a
+// pre-planted symlink at the destination, and never leaves a half-written
+// config behind on a crash.
+static bool writeFileAtomic(const std::string& path, const std::string& content) {
+    std::string tmp = path + ".tmp.XXXXXX";
+    int fd = mkstemp(tmp.data());
+    if (fd < 0) return false;
+    const char* data = content.data();
+    size_t left = content.size();
+    while (left > 0) {
+        ssize_t w = write(fd, data, left);
+        if (w < 0) {
+            if (errno == EINTR) continue;
+            close(fd); unlink(tmp.c_str());
+            return false;
+        }
+        data += w; left -= (size_t)w;
+    }
+    if (close(fd) != 0) { unlink(tmp.c_str()); return false; }
+    if (rename(tmp.c_str(), path.c_str()) != 0) { unlink(tmp.c_str()); return false; }
+    return true;
 }
 
 static bool colorEnabled() {
@@ -177,13 +204,21 @@ static void saveUserVars(const Context& ctx) {
     mkdir(dir.c_str(), 0700);
     dir += "/plusalator";
     mkdir(dir.c_str(), 0700);
-    std::ofstream f(varsPath(), std::ios::trunc);
-    if (!f) return;
-    if (g_has_memory) f << "MEMORY=" << formatNumber(g_memory) << "\n";
+    std::string payload;
+    if (g_has_memory) payload += "MEMORY=" + formatNumber(g_memory) + "\n";
     for (auto& kv : ctx.vars) {
         if (ctx.isBuiltin(kv.first)) continue;
-        f << kv.first << "=" << formatNumber(kv.second) << "\n";
+        // MEMORY is the reserved memory-slot key; a user variable with the
+        // same name would round-trip into g_memory and vanish, so keep it
+        // out of the file entirely.
+        if (kv.first.size() == 6) {
+            std::string lower = kv.first;
+            for (auto& c : lower) c = (char)tolower((unsigned char)c);
+            if (lower == "memory") continue;
+        }
+        payload += kv.first + "=" + formatNumber(kv.second) + "\n";
     }
+    writeFileAtomic(varsPath(), payload);
 }
 
 static void loadUserVars(Context& ctx) {
@@ -224,12 +259,10 @@ static bool saveSettings(const std::string& themeName, const std::string& angle,
         std::string dir = path.substr(0, slash);
         mkdir(dir.c_str(), 0700);
     }
-    std::ofstream f(path, std::ios::trunc);
-    if (!f) return false;
-    f << "theme=" << themeName << "\n";
-    f << "angle=" << angle << "\n";
-    f << "mode=" << radixName << "\n";
-    return f.good();
+    std::string payload = "theme=" + themeName + "\n"
+                        + "angle=" + angle + "\n"
+                        + "mode=" + radixName + "\n";
+    return writeFileAtomic(path, payload);
 }
 
 // Return one persisted setting (theme/angle/mode), or "" when unset.
@@ -260,6 +293,31 @@ static std::string loadSetting(const std::string& want) {
 
 // Format a result honoring the active radix. Hex/bin only apply to integral
 // values; non-integers always print in decimal so no precision is lost.
+static std::string jsonEscape(const std::string& in) {
+    std::string out;
+    out.reserve(in.size() + 8);
+    for (unsigned char c : in) {
+        switch (c) {
+            case '"':  out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\b': out += "\\b"; break;
+            case '\f': out += "\\f"; break;
+            case '\n': out += "\\n"; break;
+            case '\r': out += "\\r"; break;
+            case '\t': out += "\\t"; break;
+            default:
+                if (c < 0x20) {
+                    char buf[7];
+                    std::snprintf(buf, sizeof buf, "\\u%04x", c);
+                    out += buf;
+                } else {
+                    out += static_cast<char>(c);
+                }
+        }
+    }
+    return out;
+}
+
 static std::string formatValue(double v) {
     std::string base = formatNumber(v);
     bool integral = (v == std::floor(v)) && std::abs(v) < 9.2e18;
@@ -331,14 +389,33 @@ int main(int argc, char** argv) {
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = 0; // no SA_RESTART: interrupt blocking reads so the loop resumes
     sigaction(SIGINT, &sa, nullptr);
+
+    bool wantJson = false;
+    for (int i = 1; i < argc; i++) {
+        if (std::string(argv[i]) == "--json") {
+            wantJson = true;
+            for (int j = i; j < argc - 1; j++) argv[j] = argv[j + 1];
+            --argc;
+            --i;
+        }
+    }
+    bool hasEval = false;
+    for (int i = 1; i < argc; i++) {
+        if (std::string(argv[i]) == "--eval") { hasEval = true; break; }
+    }
+    if (wantJson && !hasEval) {
+        std::cerr << "--json requires --eval <expr>\n";
+        return 2;
+    }
+
     for (int i = 1; i < argc; i++) {
         std::string a = argv[i];
         if (a == "--help" || a == "-h") {
             std::cout << "Plusalator - a fancy interactive calculator REPL\n"
-                      << "Usage: plusalator [--eval <expr>]\n";
+                      << "Usage: plusalator [--eval <expr>] [--json]\n";
             return 0;
         } else if (a == "--version") {
-            std::cout << "plusalator 1.2.0\n";
+            std::cout << "plusalator 1.4.0\n";
             return 0;
         } else if (a == "--eval" && i + 1 < argc) {
             Context ctx;
@@ -362,16 +439,33 @@ int main(int argc, char** argv) {
                 else if (mode == "bin") g_radix = 2;
                 else if (mode == "sci") g_radix = 0;
             }
+            const std::string expr = argv[++i];
             try {
-                double result = evalLine(argv[++i], ctx);
-                if (colorEnabled())
+                double result = evalLine(expr, ctx);
+                if (wantJson) {
+                    std::cout << "{\"expression\":\"" << jsonEscape(expr) << "\",\"result\":";
+                    if (std::isfinite(result)) std::cout << formatNumber(result);
+                    else std::cout << "null";
+                    std::cout << "}\n";
+                } else if (colorEnabled()) {
                     std::cout << esc(evalTheme->rr, evalTheme->rg, evalTheme->rb) << formatValue(result) << escReset() << "\n";
-                else
+                } else {
                     std::cout << formatValue(result) << "\n";
+                }
             } catch (const CalcError& err) {
-                printCaretError(argv[i], err);
+                if (wantJson) {
+                    std::cout << "{\"expression\":\"" << jsonEscape(expr) << "\",\"error\":\""
+                              << jsonEscape(err.msg) << "\"}\n";
+                } else {
+                    printCaretError(expr, err);
+                }
             } catch (const std::exception& err) {
-                printCaretError(argv[i], CalcError(err.what()));
+                if (wantJson) {
+                    std::cout << "{\"expression\":\"" << jsonEscape(expr) << "\",\"error\":\""
+                              << jsonEscape(err.what()) << "\"}\n";
+                } else {
+                    printCaretError(expr, CalcError(err.what()));
+                }
             }
             return 0;
         } else {
@@ -1081,7 +1175,7 @@ int main(int argc, char** argv) {
             std::cout << esc( cur->pr, cur->pg, cur->pb) << "theme" << escReset()
                       << " = " << esc( cur->rr, cur->rg, cur->rb) << cur->name << escReset() << "\n";
         } else if (cmd == "version" || cmd == "about") {
-            std::cout << escBold() << esc( cur->pr, cur->pg, cur->pb) << "plusalator 1.2.0" << escReset() << "\n";
+            std::cout << escBold() << esc( cur->pr, cur->pg, cur->pb) << "plusalator 1.4.0" << escReset() << "\n";
             std::cout << escDim() << "Fancy interactive C++17 calculator REPL — stdlib only, Qalculate-flavored engine." << escReset() << "\n";
             std::cout << escDim() << "Theme: " << cur->name << " · config: " << configPath() << escReset() << "\n";
         } else if (cmd == "clear") {

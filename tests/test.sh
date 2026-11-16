@@ -113,6 +113,25 @@ echo "== FORCE_COLOR opt-in for --eval =="
 if FORCE_COLOR=1 "$BIN" --eval "1+1" 2>&1 | grep -q $'\033\[38;2;'; then PASS=$((PASS + 1)); else fail "FORCE_COLOR=1 did not colorize --eval output"; fi
 if NO_COLOR=1 FORCE_COLOR=1 "$BIN" --eval "1+1" 2>&1 | grep -q $'\033\['; then fail "NO_COLOR lost to FORCE_COLOR"; else PASS=$((PASS + 1)); fi
 
+echo "== v1.4.0: JSON --eval =="
+json_out=$("$BIN" --json --eval '2+3' 2>&1)
+if printf '%s' "$json_out" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d == {"expression": "2+3", "result": 5}' 2>/dev/null; then
+  PASS=$((PASS + 1))
+else
+  fail "--json --eval did not produce the expected object: $json_out"
+fi
+json_out=$("$BIN" --eval '2+"x"' --json 2>&1)
+if printf '%s' "$json_out" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["expression"] == "2+\"x\"" and "error" in d' 2>/dev/null; then
+  PASS=$((PASS + 1))
+else
+  fail "--json error object did not survive escaping: $json_out"
+fi
+if "$BIN" --json >/dev/null 2>&1; then
+  fail "--json without --eval should exit non-zero"
+else
+  PASS=$((PASS + 1))
+fi
+
 echo "== v1.2.0: memory slots =="
 # assert_repl <label> <input> <home-suffix> <expected-last-result>
 assert_repl() {

@@ -1,4 +1,4 @@
-# Plusalator v1.2.0 - Power Tools Edition
+# Plusalator v1.4.0 - Power Tools Edition
 
 Fancy interactive C++17 calculator REPL. Standard library only, single binary.
 Engine semantics faithfully modeled on Qalculate (qalc).
@@ -170,6 +170,12 @@ is rejected — built-in definitions win over user assignment.
   readable magnitudes (`0.000001`, not `1e-06`), integers print in full
   (`100000000000000000000`, not `1e+20`), and `-0` prints as `0`.
 
+### v1.4.0 notes
+
+- `--json --eval` produces a stable scripting object: `{"expression":"…","result":<number>}`.
+- Evaluation errors in JSON mode return `{"expression":"…","error":"…"}` instead of a caret block, with JSON string escaping for quotes and control characters.
+- The JSON result is always decimal, independent of the persisted `mode hex/bin/sci` setting.
+
 ## Command-line Usage
 
 ### `--eval` mode
@@ -179,10 +185,13 @@ Headless evaluation for scripting:
 plusalator --eval "2+3*4"        # prints: 14
 plusalator --eval "sqrt(16)"     # prints: 4
 plusalator --eval "1/0"          # prints error with caret, exit code 0
+plusalator --json --eval "2+3*4" # prints: {"expression":"2+3*4","result":14}
+plusalator --eval "1/0" --json   # prints: {"expression":"1/0","error":"division by zero"}
 ```
 
 **Flags:**
 - `--eval <expr>`: evaluate expression and print bare result (no prompt/banner/color)
+- `--json`: with `--eval`, emit a machine-readable JSON object; errors keep the same shape with an `error` field
 - `--version`: show version
 - `--help`: show usage
 
@@ -217,9 +226,9 @@ via `TIOCGWINSZ` (falls back to 80 columns).
 Tiny, dependency-free tools from the same family:
 
 - [plusafetch](https://github.com/Mark44928/plusafetch) — C++23 fetch for Termux — ~23 ms, zero subprocesses on the default path
-- [GrubBlastersHTML](https://github.com/Mark44928/GrubBlastersHTML) — Worms-style artillery in one HTML file — 70 weapons, fully destructible terrain
+- [GrubBlastersHTML](https://github.com/Mark44928/GrubBlastersHTML) — Turn-based artillery in one HTML file — 72 weapons, fully destructible terrain
 - [SnakTUI](https://github.com/Mark44928/SnakTUI) — modern Snake for your terminal — Textual + Python
-- [Easy-Termux-Package-Manager](https://github.com/Mark44928/Easy-Termux-Package-Manager) — fzf-driven package manager for Termux — snapshots, audit, 183 tests
+- [Easy-Termux-Package-Manager](https://github.com/Mark44928/Easy-Termux-Package-Manager) — fzf-driven package manager for Termux — snapshots, audit, 186 tests
 - [NoNameOS](https://github.com/Mark44928/NoNameOS) — OS simulation in a single C++17 file — virtual FS, real shell
 - [Greenit](https://github.com/Mark44928/Greenit) — green-injected theme family — dark + light, single palette.json
 - [CalculaHTML](https://github.com/Mark44928/CalculaHTML) — static HTML calculator — 15 themes + System mode, zero deps
