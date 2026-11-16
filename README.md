@@ -7,6 +7,12 @@ Engine semantics faithfully modeled on Qalculate (qalc).
 
 ![Plusalator — Qalculate-flavored C++17 REPL](docs/screenshot.png)
 
+More terminal captures:
+
+| Multi-function plot | Stats | Table |
+|---|---|---|
+| ![Plusalator plot](docs/screenshot-plot.png) | ![Plusalator stats](docs/screenshot-repl.png) | ![Plusalator table](docs/screenshot-table.png) |
+
 ```
 ⟨ plusa ⟩ ➤ 2+3*4
 = 14
