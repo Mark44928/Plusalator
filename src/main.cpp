@@ -414,6 +414,16 @@ int main(int argc, char** argv) {
             std::cout << "Plusalator - a fancy interactive calculator REPL\n"
                       << "Usage: plusalator [--eval <expr>] [--json]\n";
             return 0;
+        } else if (a == "--moo") {
+            std::cout << " _______________________________\n"
+                      << "< Calculator says moo. Math is herd. >\n"
+                      << " -------------------------------\n"
+                      << "        \\   ^__^\n"
+                      << "         \\  (oo)\\_______\n"
+                      << "            (__)\\       )\\/\\\n"
+                      << "                ||----w |\n"
+                      << "                ||     ||\n";
+            return 0;
         } else if (a == "--version") {
             std::cout << "plusalator 1.4.0\n";
             return 0;
@@ -623,6 +633,10 @@ int main(int argc, char** argv) {
         if (!edit.edit(line, promptText())) break; // Ctrl+D on empty -> quit
         if (line.empty()) { continue; }
         if (line == "quit" || line == "exit" || line == "q") break;
+        if (line == "sandwich") {
+            std::cout << esc(cur->pr, cur->pg, cur->pb) << "Okay." << escReset() << "\n";
+            continue;
+        }
 
         std::cout << "\r\033[K" << escDim() << "⟨ ·· ⟩ ➤ " << line << escReset() << "\n";
 
