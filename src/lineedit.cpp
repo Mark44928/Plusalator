@@ -9,6 +9,7 @@
 #include <sys/ioctl.h>
 #include <poll.h>
 #include <iostream>
+#include <algorithm>
 
 enum {
     KEY_ENTER = 256,
@@ -100,15 +101,59 @@ int LineEditor::termWidth() {
     return 80;
 }
 
+// UTF-8 editing helpers. The editor tracks byte offsets, but A) backspace,
+// delete and arrows must move by whole sequences, or the buffer ends up with
+// orphan continuation bytes, and B) terminal cell counts (lead bytes), not
+// bytes, or the cursor lands on the wrong cell for non-ASCII input.
+static size_t u8BackLen(const std::string& s, size_t end) {
+    if (end == 0) return 0;
+    size_t i = end - 1;
+    while (i > 0 && (static_cast<unsigned char>(s[i]) & 0xC0) == 0x80) --i;
+    return end - i;
+}
+static size_t u8FwdLen(const std::string& s, size_t start) {
+    if (start >= s.size()) return 0;
+    unsigned char c = static_cast<unsigned char>(s[start]);
+    size_t len = c < 0x80 ? 1 : (c & 0xE0) == 0xC0 ? 2 : (c & 0xF0) == 0xE0 ? 3 : (c & 0xF8) == 0xF0 ? 4 : 1;
+    return std::min(len, s.size() - start);
+}
+
+// Terminal columns, not codepoints: CJK/emoji occupy two cells and combining
+// marks occupy none. A locale-based wcwidth() is unavailable here (main never
+// calls setlocale), so cover the block ranges terminals render as wide/zero.
+static size_t u8CellWidth(const std::string& s, size_t start, size_t len) {
+    unsigned char c = static_cast<unsigned char>(s[start]);
+    unsigned cp = c;
+    if (len == 2) cp = ((c & 0x1Fu) << 6) | (static_cast<unsigned char>(s[start + 1]) & 0x3Fu);
+    else if (len == 3) cp = ((c & 0x0Fu) << 12) | ((static_cast<unsigned char>(s[start + 1]) & 0x3Fu) << 6) | (static_cast<unsigned char>(s[start + 2]) & 0x3Fu);
+    else if (len == 4) cp = ((c & 0x07u) << 18) | ((static_cast<unsigned char>(s[start + 1]) & 0x3Fu) << 12) | ((static_cast<unsigned char>(s[start + 2]) & 0x3Fu) << 6) | (static_cast<unsigned char>(s[start + 3]) & 0x3Fu);
+    if ((cp >= 0x0300 && cp <= 0x036F) || (cp >= 0x1AB0 && cp <= 0x1AFF) ||
+        (cp >= 0x1DC0 && cp <= 0x1DFF) || (cp >= 0x20D0 && cp <= 0x20FF) ||
+        (cp >= 0xFE20 && cp <= 0xFE2F) || cp == 0x200D ||
+        (cp >= 0xFE00 && cp <= 0xFE0F) || (cp >= 0xE0100 && cp <= 0xE01EF))
+        return 0;
+    if ((cp >= 0x1100 && cp <= 0x115F) || cp == 0x2329 || cp == 0x232A ||
+        (cp >= 0x2E80 && cp <= 0xA4CF && cp != 0x303F) ||
+        (cp >= 0xAC00 && cp <= 0xD7A3) || (cp >= 0xF900 && cp <= 0xFAFF) ||
+        (cp >= 0xFE10 && cp <= 0xFE19) || (cp >= 0xFE30 && cp <= 0xFE6F) ||
+        (cp >= 0xFF00 && cp <= 0xFF60) || (cp >= 0xFFE0 && cp <= 0xFFE6) ||
+        (cp >= 0x1F300 && cp <= 0x1FAFF) || (cp >= 0x20000 && cp <= 0x3FFFD))
+        return 2;
+    return 1;
+}
+
 size_t LineEditor::visibleLen(const std::string& s) {
     size_t n = 0;
-    for (size_t i = 0; i < s.size(); i++) {
+    for (size_t i = 0; i < s.size(); ) {
         if (s[i] == '\033' && i + 1 < s.size() && s[i + 1] == '[') {
             i += 2;
             while (i < s.size() && !((unsigned char)s[i] >= 0x40 && (unsigned char)s[i] <= 0x7e)) i++;
+            if (i < s.size()) i++;
             continue;
         }
-        n++;
+        size_t len = u8FwdLen(s, i);
+        n += u8CellWidth(s, i, len);
+        i += len;
     }
     return n;
 }
@@ -186,21 +231,21 @@ void LineEditor::redraw(const std::string& prompt, const std::string& buf, size_
     out += showPrompt;
     out += buf;
 
-    size_t ghostLen = 0;
+    size_t ghostCells = 0;
     if (cur == buf.size() && !buf.empty()) {
         std::string suf = ghostSuffix(buf);
         if (!suf.empty()) {
             out += "\033[2m";
             out += suf;
             out += "\033[0m";
-            ghostLen = suf.size();
+            ghostCells = visibleLen(suf);
         }
     }
 
     // position cursor at end of the typed buffer (before the ghost)
-    if (ghostLen > 0) {
+    if (ghostCells > 0) {
         char tmp[32];
-        snprintf(tmp, sizeof tmp, "\033[%zuD", ghostLen);
+        snprintf(tmp, sizeof tmp, "\033[%zuD", ghostCells);
         out += tmp;
     }
 
@@ -222,7 +267,7 @@ void LineEditor::redraw(const std::string& prompt, const std::string& buf, size_
         out += "\033[u"; // restore cursor
     }
 
-    size_t left = buf.size() - cur;
+    size_t left = visibleLen(buf) - visibleLen(buf.substr(0, cur));
     if (left > 0) {
         char tmp[32];
         snprintf(tmp, sizeof tmp, "\033[%zuD", left);
@@ -406,7 +451,7 @@ bool LineEditor::edit(std::string& out, const std::string& prompt) {
                 }
                 case KEY_CTRL_D: {
                     if (buf.empty()) { quit = true; goto done; }
-                    if (cur < buf.size()) buf.erase(cur, 1);
+                    if (cur < buf.size()) buf.erase(cur, u8FwdLen(buf, cur));
                     histIndex_ = -1;
                     redraw(prompt, buf, cur);
                     break;
@@ -445,7 +490,7 @@ bool LineEditor::edit(std::string& out, const std::string& prompt) {
                 case KEY_UP: { historyUp(buf, cur); redraw(prompt, buf, cur); break; }
                 case KEY_DOWN: { historyDown(buf, cur); redraw(prompt, buf, cur); break; }
                 case KEY_LEFT: {
-                    if (cur > 0) cur--;
+                    if (cur > 0) cur -= u8BackLen(buf, cur);
                     histIndex_ = -1;
                     redraw(prompt, buf, cur);
                     break;
@@ -455,15 +500,15 @@ bool LineEditor::edit(std::string& out, const std::string& prompt) {
                         std::string suf = ghostSuffix(buf);
                         if (!suf.empty()) { insertStr(buf, cur, suf); redraw(prompt, buf, cur); break; }
                     }
-                    if (cur < buf.size()) cur++;
+                    if (cur < buf.size()) cur += u8FwdLen(buf, cur);
                     histIndex_ = -1;
                     redraw(prompt, buf, cur);
                     break;
                 }
                 case KEY_HOME: { cur = 0; histIndex_ = -1; redraw(prompt, buf, cur); break; }
                 case KEY_END: { cur = buf.size(); histIndex_ = -1; redraw(prompt, buf, cur); break; }
-                case KEY_DELETE: { if (cur < buf.size()) buf.erase(cur, 1); histIndex_ = -1; redraw(prompt, buf, cur); break; }
-                case KEY_BACKSPACE: { if (cur > 0) { buf.erase(cur - 1, 1); cur--; } histIndex_ = -1; redraw(prompt, buf, cur); break; }
+                case KEY_DELETE: { if (cur < buf.size()) buf.erase(cur, u8FwdLen(buf, cur)); histIndex_ = -1; redraw(prompt, buf, cur); break; }
+                case KEY_BACKSPACE: { if (cur > 0) { size_t l = u8BackLen(buf, cur); buf.erase(cur - l, l); cur -= l; } histIndex_ = -1; redraw(prompt, buf, cur); break; }
                 case KEY_PASTE: {
                     histIndex_ = -1;
                     insertStr(buf, cur, pasteText);
