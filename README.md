@@ -1,4 +1,4 @@
-# Plusalator v1.4.0 - Power Tools Edition
+# Plusalator v1.5.0 - Power Tools Edition
 
 Fancy interactive C++17 calculator REPL. Standard library only, single binary.
 Engine semantics faithfully modeled on Qalculate (qalc).
@@ -176,6 +176,11 @@ is rejected — built-in definitions win over user assignment.
   readable magnitudes (`0.000001`, not `1e-06`), integers print in full
   (`100000000000000000000`, not `1e+20`), and `-0` prints as `0`.
 
+### v1.5.0 notes
+
+- Stats distributions and small-matrix helpers are built in: `normpdf`/`normcdf`, `binompdf`/`binomcdf`, `poissonpdf`/`poissoncdf`, `erf`, `logistic`, and `det2`/`det3`.
+- Number theory and integer utilities grew with `divcount`, `totient`, `modpow`, `floordiv`, and `ceildiv`.
+
 ### v1.4.0 notes
 
 - `--json --eval` produces a stable scripting object: `{"expression":"…","result":<number>}`.
@@ -237,7 +242,7 @@ Tiny, dependency-free tools from the same family:
 - [plusafetch](https://github.com/Mark44928/plusafetch) — C++23 fetch for Termux — ~23 ms, zero subprocesses on the default path
 - [GrubBlastersHTML](https://github.com/Mark44928/GrubBlastersHTML) — Turn-based artillery in one HTML file — 72 weapons, fully destructible terrain
 - [SnakTUI](https://github.com/Mark44928/SnakTUI) — Snake game for the terminal — Textual + Python
-- [Easy-Termux-Package-Manager](https://github.com/Mark44928/Easy-Termux-Package-Manager) — fzf-driven package manager for Termux — snapshots, audit, 193 tests
+- [Easy-Termux-Package-Manager](https://github.com/Mark44928/Easy-Termux-Package-Manager) — fzf-driven package manager for Termux — snapshots, audit, 194 tests
 - [NoNameOS](https://github.com/Mark44928/NoNameOS) — OS simulation in a single C++17 file — virtual FS, real shell
 - [Greenit](https://github.com/Mark44928/Greenit) — green-injected theme family — dark + light, single palette.json
 - [CalculaHTML](https://github.com/Mark44928/CalculaHTML) — static HTML calculator — 15 themes + System mode, zero deps
