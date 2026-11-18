@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" role="img" aria-labelledby="t d">
+  <title id="t">Plusalator</title>
+  <desc id="d">Plusalator logo: a blue calculator with a plus symbol on a dark panel.</desc>
+  <rect width="1200" height="300" rx="28" fill="#0C1016"/>
+  <rect x="1" y="1" width="1198" height="298" rx="27" fill="none" stroke="#263B55" stroke-width="2"/>
+  <circle cx="150" cy="150" r="96" fill="#121A24" stroke="#25384C" stroke-width="2"/>
+  <rect x="103" y="72" width="94" height="156" rx="16" fill="#7DBBFF"/>
+  <rect x="116" y="87" width="68" height="24" rx="5" fill="#0C1016"/>
+  <path d="M127 98h46" stroke="#7DBBFF" stroke-width="4" stroke-linecap="round"/>
+  <path d="M130 139h40M150 119v40" stroke="#0C1016" stroke-width="8" stroke-linecap="round"/>
+  <path d="M120 185h14M155 185h8M176 185h8M120 204h14M146 201l-6 8 7 6M166 202l6 7-6 7" stroke="#0C1016" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="310" y="156" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="88" font-weight="800" letter-spacing="4" fill="#EDF6FF">PLUSALATOR</text>
+  <text x="314" y="205" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="18" letter-spacing="4" fill="#7F9AB5">TERMINAL CALCULATOR · C++17</text>
+  <text x="1138" y="252" text-anchor="end" font-family="ui-monospace,monospace" font-size="14" letter-spacing="3" fill="#4B6175">MARK44928</text>
+</svg>

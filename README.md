@@ -1,5 +1,7 @@
 # Plusalator v1.5.0 - Power Tools Edition
 
+<p align="center"><img src="assets/logo.svg" width="760" alt="Plusalator logo"></p>
+
 Fancy interactive C++17 calculator REPL. Standard library only, single binary.
 Engine semantics faithfully modeled on Qalculate (qalc).
 
