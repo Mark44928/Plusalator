@@ -425,7 +425,7 @@ int main(int argc, char** argv) {
                       << "                ||     ||\n";
             return 0;
         } else if (a == "--version") {
-            std::cout << "plusalator 1.4.0\n";
+            std::cout << "plusalator 1.5.0\n";
             return 0;
         } else if (a == "--eval" && i + 1 < argc) {
             Context ctx;
@@ -693,6 +693,9 @@ int main(int argc, char** argv) {
                 {"cbrt", "cube root of x"},
                 {"asinh/acosh/atanh", "inverse hyperbolic sine/cosine/tangent"},
                 {"gcd/lcm", "greatest common / least common multiple"},
+                {"normpdf/normcdf", "normal distribution density / CDF"},
+                {"binomcdf/poissoncdf", "cumulative binomial / Poisson distributions"},
+                {"det2/det3", "2x2 / 3x3 determinants; modpow modular exponentiation"},
                 {"ncr/npr", "combinations / permutations of n things r at a time"},
                 {"clamp", "constrain x to [lo, hi]"},
                 {"sign/fact", "sign of x (signum) / x! factorial"},
@@ -1189,7 +1192,7 @@ int main(int argc, char** argv) {
             std::cout << esc( cur->pr, cur->pg, cur->pb) << "theme" << escReset()
                       << " = " << esc( cur->rr, cur->rg, cur->rb) << cur->name << escReset() << "\n";
         } else if (cmd == "version" || cmd == "about") {
-            std::cout << escBold() << esc( cur->pr, cur->pg, cur->pb) << "plusalator 1.4.0" << escReset() << "\n";
+            std::cout << escBold() << esc( cur->pr, cur->pg, cur->pb) << "plusalator 1.5.0" << escReset() << "\n";
             std::cout << escDim() << "Fancy interactive C++17 calculator REPL — stdlib only, Qalculate-flavored engine." << escReset() << "\n";
             std::cout << escDim() << "Theme: " << cur->name << " · config: " << configPath() << escReset() << "\n";
         } else if (cmd == "clear") {

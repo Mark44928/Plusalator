@@ -317,12 +317,92 @@ static double factorial(double v) {
     return r;
 }
 
+static long long wholeArg(double value, size_t maximum) {
+    if (!std::isfinite(value) || value < 0 || value != std::floor(value) || (unsigned long long)value > maximum) {
+        throw CalcError("expected a non-negative whole number in range", 0);
+    }
+    return (long long)value;
+}
+
+static long long divcountHelper(double value) {
+    long long n = wholeArg(value, 1000000000000ULL);
+    if (n == 0) return 0;
+    long long count = 0;
+    for (long long d = 1; d <= n / d; ++d) {
+        if (n % d == 0) count += (d * d == n) ? 1 : 2;
+    }
+    return count;
+}
+
+static double totientHelper(double value) {
+    long long n = wholeArg(value, 1000000000ULL);
+    if (n <= 1) return n == 1 ? 1.0 : 0.0;
+    long long result = n;
+    long long factor = 2;
+    long long rest = n;
+    while (factor <= rest / factor) {
+        if (rest % factor == 0) {
+            result -= result / factor;
+            while (rest % factor == 0) rest /= factor;
+        }
+        factor += (factor == 2) ? 1 : 2;
+    }
+    if (rest > 1) result -= result / rest;
+    return (double)result;
+}
+
+static double modpowHelper(double base, double exponent, double modulus) {
+    if (!std::isfinite(base) || std::abs(base) > 9007199254740992.0) throw CalcError("modpow base is out of range", 0);
+    long long b = (long long)base;
+    long long e = wholeArg(exponent, 1000000000000ULL);
+    long long m = wholeArg(modulus, 9007199254740992ULL);
+    if (m == 0) throw CalcError("modpow modulus cannot be zero", 0);
+    unsigned long long mul = 1;
+    unsigned long long bmod = ((b % m) + m) % m;
+    unsigned long long mmod = (unsigned long long)m;
+    long long remaining = e;
+    while (remaining > 0) {
+        if ((remaining & 1) != 0) mul = (mul * bmod) % mmod;
+        remaining >>= 1;
+        if (remaining) bmod = (bmod * bmod) % mmod;
+    }
+    return (double)mul;
+}
+
+static long long chooseHelper(long long n, long long k) {
+    if (k < 0 || n < k) return 0;
+    if (k > n - k) k = n - k;
+    double out = 1;
+    for (long long i = 1; i <= k; ++i) out = out * (n - i + 1) / (double)i;
+    return (long long)std::llround(out);
+}
+
+static double binomHelper(double nValue, double kValue) {
+    long long n = wholeArg(nValue, 1000000ULL);
+    long long k = wholeArg(kValue, 1000000ULL);
+    return (double)chooseHelper(n, k);
+}
+
+static double poissonSumHelper(double kValue, double lambda) {
+    long long k = wholeArg(kValue, 1000000ULL);
+    double term = std::exp(-lambda + k * std::log(lambda) - std::lgamma(k + 1.0));
+    double sum = term;
+    for (long long i = k - 1; i >= 0; --i) {
+        term = term * (i + 1) / lambda;
+        sum += term;
+    }
+    return sum;
+}
+
 static const std::map<std::string, int> builtinArgCount = {
     {"sqrt",1},{"sin",1},{"cos",1},{"tan",1},{"asin",1},{"acos",1},{"atan",1},
     {"cot",1},{"csc",1},{"sec",1},
     {"log",1},{"ln",1},{"log2",1},{"exp",1},{"abs",1},{"floor",1},{"ceil",1},{"round",1},
     {"pow",2},{"mod",2},{"hypot",2},{"gcd",2},{"lcm",2},{"cbrt",1},{"asinh",1},{"acosh",1},{"atanh",1},{"isprime",1},{"nextprime",1},{"prevprime",1},
-    {"clamp",3},{"sign",1},{"ncr",2},{"npr",2},{"fact",1}
+    {"clamp",3},{"sign",1},{"ncr",2},{"npr",2},{"fact",1},
+    {"normpdf",3},{"normcdf",3},{"binompdf",3},{"binomcdf",3},{"poissonpdf",2},{"poissoncdf",2},
+    {"logistic",1},{"erf",1},{"det2",4},{"det3",9},{"divcount",1},{"totient",1},
+    {"modpow",3},{"floordiv",2},{"ceildiv",2}
 };
 
 // trial-division primality test: shared by isprime/nextprime/prevprime/factor
@@ -388,6 +468,53 @@ static double callBuiltin(Context& ctx, const std::string& name, const std::vect
     if (name == "ncr") { if (a0 < 0 || a1 < 0 || a0 < a1 || a0 != std::floor(a0) || a1 != std::floor(a1)) throw CalcError("ncr: n and r must be non-negative integers, n >= r", 0); double out = 1; for (int i = 0; i < (int)a1; i++) { out *= (a0 - i); out /= (i + 1); } return out; }
     if (name == "npr") { if (a0 < 0 || a1 < 0 || a0 < a1 || a0 != std::floor(a0) || a1 != std::floor(a1)) throw CalcError("npr: n and r must be non-negative integers, n >= r", 0); double out = 1; for (int i = 0; i < (int)a1; i++) out *= (a0 - i); return out; }
     if (name == "fact") { if (a0 < 0 || a0 != std::floor(a0) || a0 > 170) throw CalcError("fact: n must be a non-negative integer <= 170", 0); return factorial(a0); }
+    if (name == "normpdf" || name == "normcdf") {
+        if (!std::isfinite(a0) || !std::isfinite(a1) || !std::isfinite(a2) || a2 <= 0.0) throw CalcError(name + " requires finite args and a positive stddev", 0);
+        double z = (a0 - a1) / a2;
+        if (name == "normpdf") return std::exp(-0.5 * z * z) / (a2 * std::sqrt(2.0 * std::acos(-1.0)));
+        return 0.5 * (1.0 + std::erf((a0 - a1) / (a2 * std::sqrt(2.0))));
+    }
+    if (name == "binompdf" || name == "binomcdf") {
+        if (!std::isfinite(a0) || !std::isfinite(a1) || !std::isfinite(a2) || a2 < 0.0 || a2 > 1.0) throw CalcError(name + " requires k, n and 0 <= p <= 1", 0);
+        long long n = wholeArg(a1, 1000000ULL), k = wholeArg(a0, 1000000ULL);
+        if (k > n) throw CalcError(name + " requires k <= n", 0);
+        if (name == "binompdf") {
+            return binomHelper(a1, k) * std::pow(a2, k) * std::pow(1.0 - a2, n - k);
+        }
+        double sum = 0.0;
+        for (long long i = 0; i <= k; ++i) {
+            sum += binomHelper(a1, i) * std::pow(a2, i) * std::pow(1.0 - a2, n - i);
+        }
+        return sum;
+    }
+    if (name == "poissonpdf" || name == "poissoncdf") {
+        if (!std::isfinite(a0) || !std::isfinite(a1) || a1 <= 0.0) throw CalcError(name + " requires k and a positive lambda", 0);
+        long long k = wholeArg(a0, 1000000ULL);
+        if (name == "poissonpdf") return std::exp(k * std::log(a1) - a1 - std::lgamma(k + 1.0));
+        return poissonSumHelper(a0, a1);
+    }
+    if (name == "logistic") return 1.0 / (1.0 + std::exp(-a0));
+    if (name == "erf") return std::erf(a0);
+    if (name == "det2") {
+        double c = a.size() > 3 ? a[3] : 0;
+        return a0 * c - a1 * a2;
+    }
+    if (name == "det3") {
+        // rows: a b c / d e f / g h i
+        return a[0]*a[4]*a[8] + a[1]*a[5]*a[6] + a[2]*a[3]*a[7]
+             - a[2]*a[4]*a[6] - a[1]*a[3]*a[8] - a[0]*a[5]*a[7];
+    }
+    if (name == "divcount") return (double)divcountHelper(a0);
+    if (name == "totient") return totientHelper(a0);
+    if (name == "modpow") return modpowHelper(a0, a1, a2);
+    if (name == "floordiv") {
+        if (a1 == 0.0) throw CalcError("floordiv by zero", 0);
+        return std::floor(a0 / a1);
+    }
+    if (name == "ceildiv") {
+        if (a1 == 0.0) throw CalcError("ceildiv by zero", 0);
+        return std::ceil(a0 / a1);
+    }
     if (name == "cbrt") return std::cbrt(a0);
     if (name == "asinh") return std::asinh(a0);
     if (name == "acosh") { if (a0 < 1) throw CalcError("acosh of value less than 1", 0); return std::acosh(a0); }
