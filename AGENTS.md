@@ -6,7 +6,7 @@ embedded figlet banner in src/banner.h.
 
 # Commands
 - Build/run/gate: `make` (build plusalator), `make run` (run with TMPDIR), `make check`
-  (`tests/test.sh` 186 engine/fuzz+REPL assertions + `clang++ -fsyntax-only src/calc.cpp src/main.cpp`),
+  (`tests/test.sh` 190 engine/fuzz+REPL assertions + `clang++ -fsyntax-only src/calc.cpp src/main.cpp`),
   `make clean`, `make install` (honors $PREFIX; Termux $PREFIX auto-set), `make banner`
   (regenerate src/banner.h via figlet).
 - Single expression headlessly: `./plusalator --eval "<expr>"` (bare output, exit 0 even on

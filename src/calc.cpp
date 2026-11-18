@@ -369,20 +369,6 @@ static double modpowHelper(double base, double exponent, double modulus) {
     return (double)mul;
 }
 
-static long long chooseHelper(long long n, long long k) {
-    if (k < 0 || n < k) return 0;
-    if (k > n - k) k = n - k;
-    double out = 1;
-    for (long long i = 1; i <= k; ++i) out = out * (n - i + 1) / (double)i;
-    return (long long)std::llround(out);
-}
-
-static double binomHelper(double nValue, double kValue) {
-    long long n = wholeArg(nValue, 1000000ULL);
-    long long k = wholeArg(kValue, 1000000ULL);
-    return (double)chooseHelper(n, k);
-}
-
 static double poissonSumHelper(double kValue, double lambda) {
     long long k = wholeArg(kValue, 1000000ULL);
     double term = std::exp(-lambda + k * std::log(lambda) - std::lgamma(k + 1.0));
@@ -478,14 +464,21 @@ static double callBuiltin(Context& ctx, const std::string& name, const std::vect
         if (!std::isfinite(a0) || !std::isfinite(a1) || !std::isfinite(a2) || a2 < 0.0 || a2 > 1.0) throw CalcError(name + " requires k, n and 0 <= p <= 1", 0);
         long long n = wholeArg(a1, 1000000ULL), k = wholeArg(a0, 1000000ULL);
         if (k > n) throw CalcError(name + " requires k <= n", 0);
+        if (a2 == 0.0) return (name == "binompdf") ? (k == 0 ? 1.0 : 0.0) : 1.0;
+        if (a2 == 1.0) return (name == "binompdf") ? (k == n ? 1.0 : 0.0) : (k == n ? 1.0 : 0.0);
         if (name == "binompdf") {
-            return binomHelper(a1, k) * std::pow(a2, k) * std::pow(1.0 - a2, n - k);
+            double logTerm = std::lgamma(n + 1.0) - std::lgamma(k + 1.0) - std::lgamma(n - k + 1.0)
+                           + k * std::log(a2) + (n - k) * std::log1p(-a2);
+            return logTerm > -745.0 ? std::exp(logTerm) : 0.0;
         }
-        double sum = 0.0;
-        for (long long i = 0; i <= k; ++i) {
-            sum += binomHelper(a1, i) * std::pow(a2, i) * std::pow(1.0 - a2, n - i);
+        double term = std::exp(n * std::log1p(-a2));
+        double sum = term;
+        double ratio = a2 / (1.0 - a2);
+        for (long long i = 1; i <= k; ++i) {
+            term *= (n - i + 1) / (double)i * ratio;
+            sum += term;
         }
-        return sum;
+        return std::min(1.0, std::max(0.0, sum));
     }
     if (name == "poissonpdf" || name == "poissoncdf") {
         if (!std::isfinite(a0) || !std::isfinite(a1) || a1 <= 0.0) throw CalcError(name + " requires k and a positive lambda", 0);
