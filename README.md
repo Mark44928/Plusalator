@@ -97,7 +97,7 @@ factorize 360        # or `factors` — prints 360 = 2 × 2 × 2 × 3 × 3 × 5
 
 ## Prompt & Visuals
 
-**NEW:** Completely revamped visual experience with 12 additional modern themes inspired by popular color schemes (Nord, Catppuccin, Tokyo Night, Dracula, Gruvbox, Solarized, Cyberpunk, Matrix, Sunset, Aurora, Neon, Retro) — 18 in total. The banner now features a sophisticated multi-gradient color transition, and the status line shows both variable and function counts for better context.
+**NEW:** Completely revamped visual experience with 12 additional modern themes inspired by popular color schemes (Nord, Catppuccin, Tokyo Night, Dracula, Gruvbox, Solarized, Cyberpunk, Matrix, Sunset, Aurora, Neon, Retro) — 19 in total including Greenit, Bluney and the classics. The banner now features a sophisticated multi-gradient color transition, and the status line shows both variable and function counts for better context.
 
 - **Line 1:** full-width `─` gradient rule (hint→accent→hint) with right-side dim status
   showing `theme · N vars · M funcs`, printed each cycle
@@ -106,7 +106,7 @@ factorize 360        # or `factors` — prints 360 = 2 × 2 × 2 × 3 × 3 × 5
 - **Result:** `= <value>`, bold number, 12 significant figures, trailing zeros trimmed, integers bare
 - **Error:** caret line under the offending token; next prompt glyph flashes rose once
 - **Banner:** embedded figlet output, rows colored with a top→bottom gradient at runtime
-- **Themes:** 18 built-in truecolor themes (6 hex colors each: prompt/result/error/hint/rule/accent):
+- **Themes:** 19 built-in truecolor themes (6 hex colors each: prompt/result/error/hint/rule/accent):
   - **greenit** (default) — vibrant green on dark background
   - **mono** — clean monochrome grayscale
   - **ocean** — bright blue/cyan palette
@@ -125,6 +125,7 @@ factorize 360        # or `factors` — prints 360 = 2 × 2 × 2 × 3 × 3 × 5
   - **aurora** — purple/blue/pink palette
   - **neon** — bright glowing colors
   - **retro** — CRT monitor aesthetic (amber on dark)
+  - **bluney** — calm blue family theme
 - **Theme commands:** `theme` lists themes with color swatches; `settings` provides interactive
   menu to switch theme and saves to `$HOME/.config/plusalator/config` for persistence
 - **Color control:** `NO_COLOR` environment variable or `TERM=dumb` strips all ANSI formatting
@@ -239,7 +240,9 @@ via `TIOCGWINSZ` (falls back to 80 columns).
 Tiny, dependency-free tools from the same family:
 
 - [Pythonator](https://github.com/Mark44928/Pythonator) — the Python rewrite of Plusalator: same calculator semantics, pure standard-library
+- [Solvamath](https://github.com/Mark44928/Solvamath) — terminal math puzzle game — seven puzzle types, daily seed, achievements
 - [Bluney](https://github.com/Mark44928/Bluney) — blue-injected theme family — dark + light, single palette.json
+- [Yellen](https://github.com/Mark44928/Yellen) — golden-yellow theme family — dark + light, single palette.json
 - [Mark44928](https://github.com/Mark44928) — profile and project index
 - [plusafetch](https://github.com/Mark44928/plusafetch) — C++23 fetch for Termux — ~23 ms, zero subprocesses on the default path
 - [GrubBlastersHTML](https://github.com/Mark44928/GrubBlastersHTML) — Turn-based artillery in one HTML file — 72 weapons, fully destructible terrain
