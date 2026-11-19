@@ -135,7 +135,12 @@ std::unique_ptr<Expr> Parser::parse() {
     return expr;
 }
 
-std::unique_ptr<Expr> Parser::parseExpr() { return parseAssign(); }
+std::unique_ptr<Expr> Parser::parseExpr() {
+    if (depth_ >= 256) throw CalcError("expression nested too deeply", peek().col);
+    depth_++;
+    struct DepthGuard { int& d; ~DepthGuard() { d--; } } guard{depth_};
+    return parseAssign();
+}
 
 std::unique_ptr<Expr> Parser::parseAssign() {
     auto left = parseAdd();
@@ -357,20 +362,32 @@ static double modpowHelper(double base, double exponent, double modulus) {
     long long e = wholeArg(exponent, 1000000000000ULL);
     long long m = wholeArg(modulus, 9007199254740992ULL);
     if (m == 0) throw CalcError("modpow modulus cannot be zero", 0);
-    unsigned long long mul = 1;
-    unsigned long long bmod = ((b % m) + m) % m;
-    unsigned long long mmod = (unsigned long long)m;
+    unsigned __int128 bmod = (unsigned __int128)(((b % m) + m) % m);
+    unsigned __int128 mmod = (unsigned __int128)(unsigned long long)m;
+    unsigned __int128 mul = 1;
     long long remaining = e;
     while (remaining > 0) {
         if ((remaining & 1) != 0) mul = (mul * bmod) % mmod;
         remaining >>= 1;
         if (remaining) bmod = (bmod * bmod) % mmod;
     }
-    return (double)mul;
+    return (double)(unsigned long long)mul;
 }
 
 static double poissonSumHelper(double kValue, double lambda) {
     long long k = wholeArg(kValue, 1000000ULL);
+    if (!std::isfinite(lambda) || lambda < 0.0) throw CalcError("poissoncdf requires a finite non-negative lambda", 0);
+    if (lambda <= 100.0) {
+        // forward recurrence: exp(-lambda) is still representable, and each term shrinks
+        double term = std::exp(-lambda);
+        double sum = term;
+        for (long long i = 1; i <= k; ++i) {
+            term *= lambda / (double)i;
+            sum += term;
+        }
+        return sum;
+    }
+    // backward recurrence from the (well-conditioned) k-th term
     double term = std::exp(-lambda + k * std::log(lambda) - std::lgamma(k + 1.0));
     double sum = term;
     for (long long i = k - 1; i >= 0; --i) {
@@ -451,8 +468,22 @@ static double callBuiltin(Context& ctx, const std::string& name, const std::vect
     // min/max are variadic — handled in Call::eval above
     if (name == "clamp") { return (a0 < a1) ? a1 : (a0 > a2 ? a2 : a0); }
     if (name == "sign") return (a0 > 0) - (a0 < 0) + 0.0;
-    if (name == "ncr") { if (a0 < 0 || a1 < 0 || a0 < a1 || a0 != std::floor(a0) || a1 != std::floor(a1)) throw CalcError("ncr: n and r must be non-negative integers, n >= r", 0); double out = 1; for (int i = 0; i < (int)a1; i++) { out *= (a0 - i); out /= (i + 1); } return out; }
-    if (name == "npr") { if (a0 < 0 || a1 < 0 || a0 < a1 || a0 != std::floor(a0) || a1 != std::floor(a1)) throw CalcError("npr: n and r must be non-negative integers, n >= r", 0); double out = 1; for (int i = 0; i < (int)a1; i++) out *= (a0 - i); return out; }
+    if (name == "ncr") {
+        if (a0 < 0 || a1 < 0 || a0 < a1 || a0 != std::floor(a0) || a1 != std::floor(a1)) throw CalcError("ncr: n and r must be non-negative integers, n >= r", 0);
+        if (a0 > 9007199254740992.0) throw CalcError("ncr: n too large", 0);
+        double r = std::min(a1, a0 - a1); // C(n, r) === C(n, n - r)
+        if (r > 1e6) throw CalcError("ncr: r too large", 0);
+        double out = 1;
+        for (double i = 0; i < r; i++) { out *= (a0 - i); out /= (i + 1); }
+        return out;
+    }
+    if (name == "npr") {
+        if (a0 < 0 || a1 < 0 || a0 < a1 || a0 != std::floor(a0) || a1 != std::floor(a1)) throw CalcError("npr: n and r must be non-negative integers, n >= r", 0);
+        if (a1 > 1e6) throw CalcError("npr: r too large", 0);
+        double out = 1;
+        for (double i = 0; i < a1; i++) out *= (a0 - i);
+        return out;
+    }
     if (name == "fact") { if (a0 < 0 || a0 != std::floor(a0) || a0 > 170) throw CalcError("fact: n must be a non-negative integer <= 170", 0); return factorial(a0); }
     if (name == "normpdf" || name == "normcdf") {
         if (!std::isfinite(a0) || !std::isfinite(a1) || !std::isfinite(a2) || a2 <= 0.0) throw CalcError(name + " requires finite args and a positive stddev", 0);
@@ -574,6 +605,14 @@ double Call::eval(Context& ctx) const {
     }
 
     // implicit multiplication: variable followed by parenthesized args, e.g. x(3) = x * 3
+    for (auto it = ctx.locals.rbegin(); it != ctx.locals.rend(); ++it) {
+        auto lf = it->find(name_);
+        if (lf != it->end()) {
+            double r = lf->second;
+            for (double a : argVals) r *= a;
+            return r;
+        }
+    }
     auto vf = ctx.vars.find(name_);
     if (vf != ctx.vars.end()) {
         double r = vf->second;

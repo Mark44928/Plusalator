@@ -143,6 +143,7 @@ class Parser {
     std::string input_;
     std::vector<Token> tokens_;
     size_t pos_ = 0;
+    int depth_ = 0;
 
     void tokenize();
     Token peek() const;

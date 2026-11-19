@@ -129,6 +129,7 @@ static const std::vector<Theme> ALL_THEMES = {
     
     // Retro - CRT monitor aesthetic (amber on dark)
     {"retro", 255, 191, 0, 220, 220, 220, 255, 150, 0, 100, 80, 50, 50, 50, 50, 255, 215, 0},
+    {"bluney", 125, 187, 255, 227, 239, 249, 240, 113, 120, 183, 205, 224, 14, 27, 46, 139, 213, 255},
 };
 
 static const Theme* findTheme(const std::string& name) {
