@@ -50,7 +50,7 @@ embedded figlet banner in src/banner.h.
 - Prompt ornament glyphs are standard BMP (U+27E8/27E9 ⟨⟩, U+27A9 ➤, U+00B7 ·),
   never nerd-font PUA codepoints.
 - Right-side dim status on line 1: theme · N vars · M funcs (+ `· deg|hex|M`
-  when non-default); 19 themes: greenit (default), mono, ocean, ember, sakura,
+  when non-default); 20 themes: greenit (default), mono, ocean, ember, sakura,
   midnight, nord, catppuccin, tokyonight, dracula, gruvbox, solarized, cyberpunk,
   matrix, sunset, aurora, neon, retro, bluney; `settings` switches theme and persists
   theme + angle unit + output radix to `$HOME/.config/plusalator/config`. ESC alone

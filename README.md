@@ -97,7 +97,7 @@ factorize 360        # or `factors` — prints 360 = 2 × 2 × 2 × 3 × 3 × 5
 
 ## Prompt & Visuals
 
-**NEW:** Completely revamped visual experience with 12 additional modern themes inspired by popular color schemes (Nord, Catppuccin, Tokyo Night, Dracula, Gruvbox, Solarized, Cyberpunk, Matrix, Sunset, Aurora, Neon, Retro) — 19 in total including Greenit, Bluney and the classics. The banner now features a sophisticated multi-gradient color transition, and the status line shows both variable and function counts for better context.
+**NEW:** Completely revamped visual experience with 13 additional modern themes inspired by popular color schemes (Nord, Catppuccin, Tokyo Night, Dracula, Gruvbox, Solarized, Cyberpunk, Matrix, Sunset, Aurora, Neon, Retro, Yellen) — 20 in total including Greenit, Bluney and the classics. The banner now features a sophisticated multi-gradient color transition, and the status line shows both variable and function counts for better context.
 
 - **Line 1:** full-width `─` gradient rule (hint→accent→hint) with right-side dim status
   showing `theme · N vars · M funcs`, printed each cycle
