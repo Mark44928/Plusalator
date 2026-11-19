@@ -98,7 +98,7 @@ static const std::vector<Theme> ALL_THEMES = {
     {"nord", 143, 188, 187, 236, 239, 244, 191, 97, 106, 216, 222, 233, 59, 66, 82, 136, 192, 208},
     
     // Catppuccin Mocha - Pastel colors, cozy aesthetic
-    {"catppuccin", 245, 224, 220, 205, 214, 244, 243, 139, 168, 180, 190, 254, 205, 214, 244, 137, 180, 250},
+    {"catppuccin", 245, 224, 220, 205, 214, 244, 243, 139, 168, 180, 190, 254, 49, 50, 68, 137, 180, 250},
     
     // Tokyo Night - Dark theme with vibrant accents
     {"tokyonight", 192, 202, 245, 122, 162, 247, 247, 118, 142, 187, 154, 247, 26, 27, 38, 125, 207, 255},
