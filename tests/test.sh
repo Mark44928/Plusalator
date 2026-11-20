@@ -155,6 +155,13 @@ repl_out=$(printf 'ms 42\nmc\nmr\nquit\n' | HOME="$TMPDIR/plusa-mem-e" timeout 1
 if printf '%s\n' "$repl_out" | grep -qF "memory is empty"; then PASS=$((PASS + 1));
 else fail "mc/mr did not clear memory"; fi
 
+echo "== v1.6.0: units =="
+conv_out=$(printf 'units 1 km m\nunits 100 c f\nunits 1 km kg\nunits 1 zz m\nquit\n' | HOME="$TMPDIR/plusa-units" timeout 10 "$BIN" 2>&1 | sed 's/\x1b\[[0-9;]*[A-Za-z]//g')
+for expected in "1 km = 1000 m" "100 c = 212 f" "different categories" "unknown unit"; do
+  if printf '%s\n' "$conv_out" | grep -qF "$expected"; then PASS=$((PASS + 1));
+  else fail "units -> missing '$expected'"; fi
+done
+
 echo "== v1.2.0: angle units =="
 assert_repl "deg sin(30)"          'deg\nsin(30)\nquit\n'         angle-a "0.5"
 assert_repl "grad sin(100)"        'grad\nsin(100)\nquit\n'       angle-b "1"

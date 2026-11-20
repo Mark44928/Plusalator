@@ -1,4 +1,4 @@
-# Plusalator v1.5.0 - Power Tools Edition
+# Plusalator v1.6.0 - Power Tools Edition
 
 <p align="center"><img src="assets/logo.svg" width="760" alt="Plusalator logo"></p>
 
@@ -143,7 +143,8 @@ factorize 360        # or `factors` — prints 360 = 2 × 2 × 2 × 3 × 3 × 5
 | `plot <f(x)>[,<g(x)>] [xmin xmax]` | **new** — ASCII plot; comma overlays up to 3 curves |
 | `table <f(x)> [xmin xmax [step]]` | **new** — evaluate f(x) over a range, tabulated |
 | `bench <expr> [n]` | **new** — time n evaluations, µs/eval + total |
-| `stats <n...>` | **new** — count/min/max/sum/mean/median/stddev |
+| `stats <n...>` | count/min/max/sum/mean/median/stddev |
+| `units <v> <from> <to>` | **new** — convert length, mass, speed, volume, area, data, time, energy, pressure, angle and temperature |
 | `clear` | Clear screen and re-banner |
 | `theme` | List available themes with color swatches |
 | `settings` | Interactive settings menu (switch theme) |
@@ -178,6 +179,10 @@ is rejected — built-in definitions win over user assignment.
 - Bare-number display law enforced: results never leak exponent notation for
   readable magnitudes (`0.000001`, not `1e-06`), integers print in full
   (`100000000000000000000`, not `1e+20`), and `-0` prints as `0`.
+
+### v1.6.0 notes
+
+- `units 5 km mi` converts between common units, with temperature handled separately; `units 1 km kg` refuses to mix categories instead of returning a nonsense number.
 
 ### v1.5.0 notes
 

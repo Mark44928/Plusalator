@@ -15,6 +15,7 @@
 #include <cstdio>
 #include <csignal>
 #include <set>
+#include <map>
 #include <sstream>
 #include <chrono>
 #include <algorithm>
@@ -25,6 +26,60 @@
 // handler must resume the loop instead of terminating.
 static volatile sig_atomic_t g_sigint_seen = 0;
 static void onSigint(int) { g_sigint_seen = 1; }
+
+// units — small fixed conversion table for the `units` command. Factors are
+// relative to one base unit per category; temperature is handled separately.
+static bool convertUnit(double value, std::string from, std::string to, double& out, std::string& err) {
+    for (char& ch : from) ch = (char)std::tolower((unsigned char)ch);
+    for (char& ch : to) ch = (char)std::tolower((unsigned char)ch);
+    if (from == to) { out = value; return true; }
+
+    auto temp = [](const std::string& u, double v, bool toC) -> double {
+        if (u == "c" || u == "celsius") return toC ? v : v;
+        if (u == "f" || u == "fahrenheit") return toC ? (v - 32.0) * 5.0 / 9.0 : v * 9.0 / 5.0 + 32.0;
+        return toC ? v - 273.15 : v + 273.15;
+    };
+    bool fromTemp = from == "c" || from == "celsius" || from == "f" || from == "fahrenheit" || from == "k" || from == "kelvin";
+    bool toTemp = to == "c" || to == "celsius" || to == "f" || to == "fahrenheit" || to == "k" || to == "kelvin";
+    if (fromTemp || toTemp) {
+        if (!fromTemp || !toTemp) { err = "temperature units cannot mix with other categories"; return false; }
+        double c = temp(from, value, true);
+        if (c < -273.15) { err = "temperature is below absolute zero"; return false; }
+        out = temp(to, c, false);
+        return true;
+    }
+
+    struct Unit { const char* name; int cat; double factor; };
+    static const Unit table[] = {
+        {"m",0,1.0}, {"km",0,1000.0}, {"cm",0,0.01}, {"mm",0,0.001}, {"mi",0,1609.344},
+        {"yd",0,0.9144}, {"ft",0,0.3048}, {"in",0,0.0254}, {"nmi",0,1852.0},
+        {"kg",1,1.0}, {"g",1,0.001}, {"mg",1,0.000001}, {"lb",1,0.45359237},
+        {"oz",1,0.028349523125}, {"st",1,6.35029318}, {"tonne",1,1000.0},
+        {"m/s",2,1.0}, {"km/h",2,0.2777777777777778}, {"mph",2,0.44704}, {"kn",2,0.5144444444444445},
+        {"l",3,1.0}, {"ml",3,0.001}, {"m3",3,1000.0}, {"gal",3,3.785411784},
+        {"qt",3,0.946352946}, {"pt",3,0.473176473}, {"cup",3,0.2365882365}, {"floz",3,0.0295735295625},
+        {"m2",4,1.0}, {"km2",4,1000000.0}, {"ha",4,10000.0}, {"acre",4,4046.8564224},
+        {"ft2",4,0.09290304}, {"in2",4,0.00064516},
+        {"b",5,1.0}, {"kb",5,1000.0}, {"mb",5,1000000.0}, {"gb",5,1000000000.0},
+        {"tb",5,1000000000000.0}, {"kib",5,1024.0}, {"mib",5,1048576.0}, {"gib",5,1073741824.0},
+        {"tib",5,1099511627776.0},
+        {"s",6,1.0}, {"min",6,60.0}, {"h",6,3600.0}, {"day",6,86400.0}, {"week",6,604800.0},
+        {"j",7,1.0}, {"kj",7,1000.0}, {"cal",7,4.184}, {"kcal",7,4184.0},
+        {"wh",7,3600.0}, {"kwh",7,3600000.0},
+        {"pa",8,1.0}, {"kpa",8,1000.0}, {"bar",8,100000.0}, {"atm",8,101325.0},
+        {"psi",8,6894.757293168}, {"mmhg",8,133.322387415},
+        {"rad",9,1.0}, {"deg",9,0.017453292519943295}, {"grad",9,0.015707963267948967},
+    };
+    const Unit* a = nullptr; const Unit* b = nullptr;
+    for (const auto& u : table) {
+        if (from == u.name) a = &u;
+        if (to == u.name) b = &u;
+    }
+    if (!a || !b) { err = "unknown unit (try: m km mi kg lb lb c f k l gal m2 acre gb h cal psi rad deg)"; return false; }
+    if (a->cat != b->cat) { err = "units belong to different categories"; return false; }
+    out = value * a->factor / b->factor;
+    return true;
+}
 
 static void printCaretError(const std::string& input, const CalcError& err) {
     std::cout << input << "\n";
@@ -427,7 +482,7 @@ int main(int argc, char** argv) {
                       << "                ||     ||\n";
             return 0;
         } else if (a == "--version") {
-            std::cout << "plusalator 1.5.0\n";
+            std::cout << "plusalator 1.6.0\n";
             return 0;
         } else if (a == "--eval" && i + 1 < argc) {
             Context ctx;
@@ -684,6 +739,7 @@ int main(int argc, char** argv) {
                 {"plot <f(x)>[,<g(x)>] [xmin xmax]", "ASCII plot, comma to overlay curves"},
                 {"table <f(x)> [xmin xmax [step]]", "evaluate f(x) over a range"},
                 {"stats <n...>", "count/min/max/sum/mean/median/stddev"},
+                {"units <v> <from> <to>", "convert length, mass, speed, volume, area, data, time, energy, pressure, angle, temperature"},
                 {"bench <expr> [n]", "time n evaluations (default 100000)"},
                 {"clear", "clear screen and re-banner"},
                 {"theme", "list available themes"},
@@ -796,6 +852,19 @@ int main(int argc, char** argv) {
                     std::cout << esc( cur->pr, cur->pg, cur->pb) << "exported " << kind << escReset()
                               << escDim() << " → " << path << escReset() << "\n";
                 }
+            }
+        } else if (cmd == "units") {
+            std::istringstream us(arg);
+            double value = 0; std::string from, to, extra;
+            double result = 0; std::string err;
+            if (!(us >> value >> from >> to) || (us >> extra)) {
+                std::cout << escDim() << "usage: units <value> <from> <to>   e.g. units 5 km mi" << escReset() << "\n";
+            } else if (!convertUnit(value, from, to, result, err)) {
+                std::cout << esc( cur->er, cur->eg, cur->eb) << err << escReset() << "\n";
+            } else {
+                std::cout << esc( cur->pr, cur->pg, cur->pb) << formatNumber(value) << " " << from
+                          << escReset() << " = " << esc( cur->rr, cur->rg, cur->rb)
+                          << formatNumber(result) << " " << to << escReset() << "\n";
             }
         } else if (cmd == "bench") {
             std::vector<std::string> tokens;
@@ -1194,7 +1263,7 @@ int main(int argc, char** argv) {
             std::cout << esc( cur->pr, cur->pg, cur->pb) << "theme" << escReset()
                       << " = " << esc( cur->rr, cur->rg, cur->rb) << cur->name << escReset() << "\n";
         } else if (cmd == "version" || cmd == "about") {
-            std::cout << escBold() << esc( cur->pr, cur->pg, cur->pb) << "plusalator 1.5.0" << escReset() << "\n";
+            std::cout << escBold() << esc( cur->pr, cur->pg, cur->pb) << "plusalator 1.6.0" << escReset() << "\n";
             std::cout << escDim() << "Fancy interactive C++17 calculator REPL — stdlib only, Qalculate-flavored engine." << escReset() << "\n";
             std::cout << escDim() << "Theme: " << cur->name << " · config: " << configPath() << escReset() << "\n";
         } else if (cmd == "clear") {
