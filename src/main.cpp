@@ -481,7 +481,7 @@ int main(int argc, char** argv) {
                       << "                ||----w |\n"
                       << "                ||     ||\n";
             return 0;
-        } else if (a == "--version") {
+        } else if (a == "--version" || a == "-v") {
             std::cout << "plusalator 1.6.0\n";
             return 0;
         } else if (a == "--eval" && i + 1 < argc) {
