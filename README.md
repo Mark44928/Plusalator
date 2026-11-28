@@ -9,6 +9,8 @@ Engine semantics faithfully modeled on Qalculate (qalc).
 
 ![Plusalator — Qalculate-flavored C++17 REPL](docs/screenshot.png)
 
+<img src="docs/screenshot-cli.png" width="640" alt="Plusalator CLI screenshot">
+
 More terminal captures:
 
 | Multi-function plot | Stats | Table |
