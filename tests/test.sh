@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/data/data/com.termux/files/usr/bin/env bash
 # tests/test.sh — Plusalator engine tests via --eval (bare output, no TTY).
 # Exit code: 0 if all pass, non-zero otherwise.
 set -euo pipefail
